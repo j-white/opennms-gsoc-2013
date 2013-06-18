@@ -30,12 +30,15 @@ package org.opennms.netmgt.config;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.opennms.core.utils.ConfigFileConstants;
 import org.opennms.core.utils.ThreadCategory;
 import org.opennms.core.xml.JaxbUtils;
 import org.opennms.netmgt.config.service.Service;
 import org.opennms.netmgt.config.service.ServiceConfiguration;
+import org.opennms.netmgt.config.service.types.ServiceType;
 
 /**
  * <p>
@@ -54,7 +57,7 @@ import org.opennms.netmgt.config.service.ServiceConfiguration;
  *
  * @author <a href="mailto:weave@oculan.com">Weave</a>
  */
-public final class ServiceConfigFactory {
+public final class ServiceConfigFactory implements ServiceConfigDao {
     /**
      * The singleton instance of this factory
      */
@@ -149,14 +152,8 @@ public final class ServiceConfigFactory {
         m_singleton = instance;
     }
 
-    /**
-     * Returns an array of all the defined configuration information for the
-     * <em>Services</em>. If there are no defined services an array of length
-     * zero is returned to the caller.
-     *
-     * @return An array holding a reference to all the Service configuration
-     *         instances.
-     */
+    /** {@inheritDoc} */
+    @Override
     public Service[] getServices() {
         int count = m_config.getServiceCount();
         Service[] slist = new Service[count];
@@ -167,5 +164,23 @@ public final class ServiceConfigFactory {
         }
 
         return slist;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public List<Service> getServiceList() {
+        return m_config.getServiceCollection();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public List<Service> getServicesOfType(ServiceType type) {
+        List<Service> matchedServices = new LinkedList<Service>();
+        for (Service svc : m_config.getServiceCollection()) {
+            if (type == svc.getType()) {
+                matchedServices.add(svc);
+            }
+        }
+        return matchedServices;
     }
 }
