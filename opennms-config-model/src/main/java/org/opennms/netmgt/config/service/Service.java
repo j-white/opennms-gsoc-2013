@@ -38,10 +38,14 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 import org.opennms.core.xml.JaxbUtils;
+import org.opennms.netmgt.config.service.types.ServiceType;
+import org.opennms.netmgt.config.service.types.ServiceTypeAdapter;
 
 /**
  * Service to be launched by the manager.
@@ -54,6 +58,13 @@ public class Service implements Serializable {
     // --------------------------/
     // - Class/Member Variables -/
     // --------------------------/
+
+    /**
+     * Type attribute
+     */
+    @XmlAttribute(name = "type")
+    @XmlJavaTypeAdapter(ServiceTypeAdapter.class)
+    private ServiceType m_type = ServiceType.VANILLA;
 
     /**
      * Field _name.
@@ -87,9 +98,11 @@ public class Service implements Serializable {
         super();
     }
 
-    public Service(final String name, final String className,
-            final List<Attribute> attributes, final List<Invoke> invokes) {
+    public Service(final ServiceType type, final String name,
+            final String className, final List<Attribute> attributes,
+            final List<Invoke> invokes) {
         super();
+        setType(type);
         setName(name);
         setClassName(className);
         setAttribute(attributes);
@@ -99,6 +112,15 @@ public class Service implements Serializable {
     // -----------/
     // - Methods -/
     // -----------/
+
+    @XmlTransient
+    public ServiceType getType() {
+        return m_type;
+    }
+
+    public void setType(ServiceType type) {
+        m_type = type;
+    }
 
     /**
      * 

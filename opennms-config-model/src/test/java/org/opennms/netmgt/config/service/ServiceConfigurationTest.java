@@ -37,6 +37,7 @@ import java.util.List;
 import org.junit.runners.Parameterized.Parameters;
 import org.opennms.core.test.xml.XmlTestNoCastor;
 import org.opennms.netmgt.config.service.types.InvokeAtType;
+import org.opennms.netmgt.config.service.types.ServiceType;
 
 public class ServiceConfigurationTest extends
         XmlTestNoCastor<ServiceConfiguration> {
@@ -61,7 +62,7 @@ public class ServiceConfigurationTest extends
                                arguments));
 
         List<Service> services = new LinkedList<Service>();
-        Service svc = new Service(":Name=HttpAdaptor",
+        Service svc = new Service(ServiceType.BOOTSTRAP, ":Name=HttpAdaptor",
                                   "mx4j.tools.adaptor.http.HttpAdaptor",
                                   attributes, invokes);
         services.add(svc);
@@ -69,7 +70,7 @@ public class ServiceConfigurationTest extends
         return Arrays.asList(new Object[][] { {
                 new ServiceConfiguration(services),
                 "<service-configuration>"
-                        + "  <service>\n"
+                        + "  <service type=\"bootstrap\">\n"
                         + "    <name>:Name=HttpAdaptor</name>\n"
                         + "    <class-name>mx4j.tools.adaptor.http.HttpAdaptor</class-name>\n"
                         + "    <attribute>\n"
