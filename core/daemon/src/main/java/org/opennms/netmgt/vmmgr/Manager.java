@@ -43,7 +43,9 @@ import javax.management.MBeanServerFactory;
 
 import org.apache.log4j.LogManager;
 import org.opennms.core.utils.ThreadCategory;
+import org.opennms.netmgt.config.service.Service;
 import org.opennms.netmgt.config.service.types.InvokeAtType;
+import org.opennms.netmgt.config.service.types.ServiceType;
 import org.opennms.netmgt.icmp.Pinger;
 import org.opennms.netmgt.icmp.PingerFactory;
 
@@ -102,8 +104,9 @@ public class Manager implements ManagerMBean {
         invoker.setAtType(InvokeAtType.STOP);
         invoker.setReverse(true);
         invoker.setFailFast(false);
-        
-        List<InvokerService> services = InvokerService.createServiceList(Invoker.getDefaultServiceConfigFactory().getServices());
+
+        List<Service> servicesToStop = Invoker.getDefaultServiceConfigFactory().getServicesWithoutType(ServiceType.VANILLA);
+        List<InvokerService> services = InvokerService.createServiceList(servicesToStop);
         invoker.setServices(services);
         invoker.getObjectInstances();
         invoker.invokeMethods();
@@ -134,7 +137,7 @@ public class Manager implements ManagerMBean {
         invoker.setAtType(InvokeAtType.STATUS);
         invoker.setFailFast(false);
 
-        final List<InvokerService> services = InvokerService.createServiceList(Invoker.getDefaultServiceConfigFactory().getServices());
+        final List<InvokerService> services = InvokerService.createServiceList(ServiceRegistry.getInstance().getServices());
         invoker.setServices(services);
         invoker.getObjectInstances();
         final List<InvokerResult> results = invoker.invokeMethods();

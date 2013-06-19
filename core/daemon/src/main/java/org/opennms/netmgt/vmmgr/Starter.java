@@ -48,6 +48,7 @@ import org.opennms.core.utils.LogUtils;
 import org.opennms.core.utils.ThreadCategory;
 import org.opennms.netmgt.config.service.Service;
 import org.opennms.netmgt.config.service.types.InvokeAtType;
+import org.opennms.netmgt.config.service.types.ServiceType;
 
 /**
  * <p>
@@ -231,6 +232,7 @@ public class Starter {
     }
 
     private void start() {
+        ServiceRegistry.getInstance().setBootstrapComplete(false);
         log().debug("Beginning startup");
 
         MBeanServer server = ManagementFactory.getPlatformMBeanServer();
@@ -238,7 +240,8 @@ public class Starter {
         Invoker invoker = new Invoker();
         invoker.setServer(server);
         invoker.setAtType(InvokeAtType.START);
-        List<InvokerService> services = InvokerService.createServiceList(Invoker.getDefaultServiceConfigFactory().getServices());
+        List<Service> servicesToStart = Invoker.getDefaultServiceConfigFactory().getServicesWithoutType(ServiceType.VANILLA);
+        List<InvokerService> services = InvokerService.createServiceList(servicesToStart);
         invoker.setServices(services);
         invoker.instantiateClasses();
 
@@ -265,8 +268,12 @@ public class Starter {
                 // Shouldn't get here
                 return;
             }
+
+            // The service was started successfully, add it to the service registry
+            ServiceRegistry.getInstance().addService(result.getService());
         }
-        
+
         log().debug("Startup complete");
+        ServiceRegistry.getInstance().setBootstrapComplete(true);
     }
 }
