@@ -27,4 +27,6 @@ public interface ServiceConfigDao {
     public List<Service> getServiceList();
 
     public List<Service> getServicesOfType(ServiceType type);
+
+    public List<Service> getServicesWithoutType(ServiceType type);
 }

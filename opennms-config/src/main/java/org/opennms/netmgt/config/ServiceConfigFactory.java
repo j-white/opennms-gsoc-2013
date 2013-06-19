@@ -183,4 +183,16 @@ public final class ServiceConfigFactory implements ServiceConfigDao {
         }
         return matchedServices;
     }
+
+    /** {@inheritDoc} */
+    @Override
+    public List<Service> getServicesWithoutType(ServiceType type) {
+        List<Service> matchedServices = new LinkedList<Service>();
+        for (Service svc : m_config.getServiceCollection()) {
+            if (type != svc.getType()) {
+                matchedServices.add(svc);
+            }
+        }
+        return matchedServices;
+    }
 }
