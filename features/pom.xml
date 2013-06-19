@@ -65,6 +65,9 @@
     <!-- Access point monitor -->
     <module>access-point-monitor</module>
 
+    <!-- Clustering support -->
+    <module>clustering</module>
+
     <!-- OpenNMS Vaadin Themes -->
     <module>themes</module>
   </modules>

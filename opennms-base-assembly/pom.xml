@@ -346,6 +346,12 @@
       <version>${project.version}</version>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.opennms.features.clustering</groupId>
+      <artifactId>org.opennms.features.clustering.clusterd</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+    </dependency>
     <!-- webapp dependencies -->
     <dependency>
       <groupId>log4j</groupId>
