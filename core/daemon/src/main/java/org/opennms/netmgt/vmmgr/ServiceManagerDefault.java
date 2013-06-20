@@ -1,7 +1,7 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2007-2011 The OpenNMS Group, Inc.
+ * Copyright (C) 2007-2013 The OpenNMS Group, Inc.
  * OpenNMS(R) is Copyright (C) 1999-2013 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
@@ -40,28 +40,26 @@ import org.opennms.netmgt.config.service.types.InvokeAtType;
 import org.opennms.netmgt.vmmgr.Invoker;
 
 /**
- * Used to start/stop services outside of the manager daemon.
- *
- * FIXME: Maybe we're better off keeping this in the manager daemon
- * and exposing some other interface through which we can start the services
- * that only run on the leader.
- *
+ * Used to start/stop services.
+ * 
  * @author jwhite
- *
+ * 
  */
-public class ServiceManager {
+public class ServiceManagerDefault implements ServiceManager {
     private MBeanServer m_mbeanServer;
 
-    public ServiceManager() {
+    public ServiceManagerDefault() {
         m_mbeanServer = ManagementFactory.getPlatformMBeanServer();
     }
 
+    /** {@inheritDoc} */
     public void start(Service service) {
         List<Service> servicesToStart = new ArrayList<Service>(1);
         servicesToStart.add(service);
         start(servicesToStart);
     }
 
+    /** {@inheritDoc} */
     public void start(List<Service> servicesToStart) {
         Invoker invoker = new Invoker();
         invoker.setServer(m_mbeanServer);
@@ -94,12 +92,14 @@ public class ServiceManager {
         }
     }
 
+    /** {@inheritDoc} */
     public void stop(Service service) {
         List<Service> servicesToStop = new ArrayList<Service>(1);
         servicesToStop.add(service);
         stop(servicesToStop);
     }
 
+    /** {@inheritDoc} */
     public void stop(List<Service> servicesToStop) {
         Invoker invoker = new Invoker();
         invoker.setServer(m_mbeanServer);
@@ -120,10 +120,9 @@ public class ServiceManager {
         }
     }
 
-    public boolean isActive(Service service) {
-        synchronized (this) {
-            return ServiceRegistry.getInstance().getServices().contains(service);
-        }
+    /** {@inheritDoc} */
+    public boolean isStarted(Service service) {
+        return ServiceRegistry.getInstance().getServices().contains(service);
     }
 
     private ThreadCategory log() {
