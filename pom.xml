@@ -1137,6 +1137,12 @@
       </dependency>
       <dependency>
         <groupId>org.opennms.core.test-api</groupId>
+        <artifactId>org.opennms.core.test-api.grid</artifactId>
+        <version>${project.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.opennms.core.test-api</groupId>
         <artifactId>org.opennms.core.test-api.http</artifactId>
         <version>${project.version}</version>
         <scope>test</scope>
@@ -1688,6 +1694,11 @@
         <version>${project.version}</version>
         <type>tar.gz</type>
         <classifier>dist</classifier>
+      </dependency>
+      <dependency>
+        <groupId>org.opennms.core</groupId>
+        <artifactId>org.opennms.core.grid</artifactId>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.opennms</groupId>

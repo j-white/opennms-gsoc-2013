@@ -29,6 +29,7 @@
     <module>db</module>
     <module>db-install</module>
     <module>doc</module>
+    <module>grid</module>
     <module>icmp-jna</module>
     <module>lib</module>
     <module>runtime</module>
