@@ -26,7 +26,7 @@
     <properties>
         <property name="hazelcast.logging.type">log4j</property>
     </properties>
-    <networkp
+    <network>
         <port auto-increment="true">5701</port>
         <outbound-ports>
             <!--
