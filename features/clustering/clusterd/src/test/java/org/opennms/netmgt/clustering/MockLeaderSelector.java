@@ -1,7 +1,7 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2007-2013 The OpenNMS Group, Inc.
+ * Copyright (C) 2006-2013 The OpenNMS Group, Inc.
  * OpenNMS(R) is Copyright (C) 1999-2013 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
@@ -26,12 +26,37 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.clustering.jmx;
-
-import org.opennms.netmgt.daemon.BaseOnmsMBean;
+package org.opennms.netmgt.clustering;
 
 /**
- * ClusterdMBean
+ * Mock leader selector which automatically grants
+ * leadership when started.
+ *
+ * @author jwhite
  */
-public interface ClusterdMBean extends BaseOnmsMBean {
+public class MockLeaderSelector extends LeaderSelector {
+    /**
+     * Thread for calling the the listener.
+     */
+    private Thread m_thread = null;
+
+    public MockLeaderSelector(LeaderSelectorListener listener) {
+        setListener(listener);
+    }
+
+    public void start() {
+        Thread m_thread = new Thread(this);
+        m_thread.start();
+    }
+
+    public void stop() {
+        if (m_thread != null) {
+            m_thread.interrupt();
+        }
+    }
+
+    @Override
+    public void run() {
+        getListener().takeLeadership();
+    }
 }

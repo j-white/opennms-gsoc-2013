@@ -1,7 +1,7 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2008-2013 The OpenNMS Group, Inc.
+ * Copyright (C) 2007-2013 The OpenNMS Group, Inc.
  * OpenNMS(R) is Copyright (C) 1999-2013 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
@@ -28,52 +28,77 @@
 
 package org.opennms.netmgt.clustering;
 
-import com.hazelcast.core.Hazelcast;
-import com.hazelcast.core.HazelcastInstance;
-
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 
+import org.opennms.core.grid.DataGridProvider;
+import org.opennms.core.grid.HazelcastDataGridProvider;
+
 import org.opennms.core.utils.ThreadCategory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Required;
 
 /**
- * Leader selector which uses a distributed lock provided by Hazelcast
- * to elect a leader.
+ * Leader selector which uses a distributed lock obtained via the default grid
+ * provider.
  * 
  * When the lock is obtained, the listener is invoked. When the listener
  * function returns the lock is released and made available for another
  * candidate to secure.
- *
+ * 
  * @author jwhite
- *
+ * 
  */
 public class LeaderSelector implements Runnable {
-
     /**
      * The listener we should invoke when we obtain the leader lock.
      */
-    private LeaderSelectorListener m_listener;
+    private LeaderSelectorListener m_listener = null;
+
+    /**
+     * The data grid provider used to obtain the distributed lock.
+     */
+    @Autowired
+    private DataGridProvider m_dataGridProvider = new HazelcastDataGridProvider();
 
     /**
      * Thread for acquiring the lock.
      */
     private Thread m_thread = null;
- 
+
     /**
      * Flag used to notify the thread to return.
      */
     private boolean m_stopped = true;
 
     /**
+     * Number of milliseconds used to wait for the lock before checking the
+     * stopped flag.
+     */
+    public static final int LOCK_WAIT_MS = 500;
+
+    /**
      * Unique ID for the leader lock.
      */
     public static final String LEADER_LOCK_ID = "org.opennms.netmgt.clustering.LeaderSelector.LOCK";
 
+    public LeaderSelector() {
+        // This method is intentionally left blank
+    }
+
     public LeaderSelector(LeaderSelectorListener listener) {
-        m_listener = listener;
+        setListener(listener);
+    }
+
+    public LeaderSelector(LeaderSelectorListener listener,
+            DataGridProvider dataGridProvider) {
+        setListener(listener);
+        setDataGridProvider(dataGridProvider);
     }
 
     public void start() {
+        assert (m_dataGridProvider != null);
+        assert (m_listener != null);
         m_stopped = false;
         Thread m_thread = new Thread(this);
         m_thread.start();
@@ -81,25 +106,20 @@ public class LeaderSelector implements Runnable {
 
     public void stop() {
         m_stopped = true;
-        m_thread.interrupt();
+        if (m_thread != null) {
+            m_thread.interrupt();
+        }
     }
 
     @Override
     public void run() {
-        // FIXME: Initialization of Hazelcast instances should probably go elsewhere
-        HazelcastInstance hazelcastInstance;
+        log().debug("Using distributed lock from " + m_dataGridProvider);
+        Lock lock = m_dataGridProvider.getLock(LEADER_LOCK_ID);
 
-        // Only create a single instance of Hazelcast at a time
-        synchronized(LEADER_LOCK_ID) {
-            hazelcastInstance = Hazelcast.newHazelcastInstance();
-        }
-
-        // FIXME: We may want to abstract the Hazelcast functions and move these to some core package
-        Lock lock = hazelcastInstance.getLock(LEADER_LOCK_ID);
         log().debug("Waiting for leader lock...");
         while (true) {
             try {
-                if (lock.tryLock(500, TimeUnit.MILLISECONDS)) {
+                if (lock.tryLock(LOCK_WAIT_MS, TimeUnit.MILLISECONDS)) {
                     try {
                         log().debug("Got leader lock!");
                         m_listener.takeLeadership();
@@ -117,6 +137,23 @@ public class LeaderSelector implements Runnable {
                 break;
             }
         }
+    }
+
+    public LeaderSelectorListener getListener() {
+        return m_listener;
+    }
+
+    @Required
+    public void setListener(LeaderSelectorListener listener) {
+        m_listener = listener;
+    }
+
+    public DataGridProvider getDataGridProvider() {
+        return m_dataGridProvider;
+    }
+
+    public void setDataGridProvider(DataGridProvider dataGridProvider) {
+        m_dataGridProvider = dataGridProvider;
     }
 
     private ThreadCategory log() {

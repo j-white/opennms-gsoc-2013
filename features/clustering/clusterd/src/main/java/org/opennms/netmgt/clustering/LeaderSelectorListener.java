@@ -28,6 +28,18 @@
 
 package org.opennms.netmgt.clustering;
 
+/**
+ * Used by the leader selector to notify the listener that he has become
+ * leader.
+ * 
+ * @author jwhite
+ * 
+ */
 public interface LeaderSelectorListener {
+
+    /**
+     * Called when we have acquired leadership. Leadership is relinquished
+     * when the method returns.
+     */
     public void takeLeadership();
 }

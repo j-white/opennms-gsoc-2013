@@ -1,8 +1,8 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2008-2013 The OpenNMS Group, Inc.
- * OpenNMS(R) is Copyright (C) 1999-2011 The OpenNMS Group, Inc.
+ * Copyright (C) 2007-2013 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2013 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
  *
@@ -33,11 +33,14 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.opennms.core.utils.ThreadCategory;
+import org.opennms.netmgt.config.ServiceConfigDao;
 import org.opennms.netmgt.config.ServiceConfigFactory;
 import org.opennms.netmgt.config.service.Service;
 import org.opennms.netmgt.config.service.types.ServiceType;
 import org.opennms.netmgt.daemon.AbstractServiceDaemon;
 import org.opennms.netmgt.vmmgr.ServiceManager;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Required;
 
 /**
  * The Clusterd daemon is responsible for electing a leader in the cluster and
@@ -52,22 +55,29 @@ public class Clusterd extends AbstractServiceDaemon implements
     /**
      * The leader selector process used to elect a leader.
      */
-    private LeaderSelector m_leaderSelector = null;
+    private LeaderSelector m_leaderSelector;
 
     /**
      * Thread handle to our leader handler. Only when we are the leader.
      */
-    private Thread m_leaderThread = null;
+    private Thread m_leaderThread;
+
+    /**
+     * Used to retrieve the list of services that are not automatically
+     * started by the manager.
+     */
+    private ServiceConfigDao m_serviceConfigDao = null;
+
+    /**
+     * Used to start the services.
+     */
+    @Autowired
+    private ServiceManager m_serviceManager;
 
     /**
      * Used to notify the leader thread we are stopping.
      */
     private boolean m_stopped = true;
-
-    /**
-     * Used to start the services.
-     */
-    private ServiceManager m_serviceManager = new ServiceManager();
 
     public Clusterd() {
         super("OpenNMS." + DAEMON_NAME);
@@ -75,19 +85,22 @@ public class Clusterd extends AbstractServiceDaemon implements
 
     @Override
     protected void onInit() {
-        try {
-            ServiceConfigFactory.init();
-        } catch (IOException e) {
-            throw new RuntimeException(
-                                       "Failed to load the service configuration.",
-                                       e);
+        if (m_serviceConfigDao == null) {
+            try {
+                ServiceConfigFactory.init();
+            } catch (IOException e) {
+                throw new RuntimeException(
+                                           "Failed to load the service configuration.",
+                                           e);
+            }
+            m_serviceConfigDao = ServiceConfigFactory.getInstance();
         }
-
-        m_leaderSelector = new LeaderSelector(this);
     }
 
     @Override
     protected void onStart() {
+        assert (m_leaderSelector != null);
+        assert (m_serviceManager != null);
         log().debug("Starting the leader selector.");
         m_stopped = false;
         m_leaderSelector.start();
@@ -105,32 +118,65 @@ public class Clusterd extends AbstractServiceDaemon implements
 
     @Override
     public void takeLeadership() {
-        log().info("Node was elected master.");
+        log().info("Node was elected leader.");
 
         // Get the list of vanilla services that are not running
-        List<Service> vanillaServices = ServiceConfigFactory.getInstance().getServicesOfType(ServiceType.VANILLA);
+        List<Service> vanillaServices = m_serviceConfigDao.getServicesOfType(ServiceType.VANILLA);
         List<Service> servicesToStart = new LinkedList<Service>();
         for (Service svc : vanillaServices) {
-            if (!m_serviceManager.isActive(svc)) {
+            if (!m_serviceManager.isStarted(svc)) {
                 servicesToStart.add(svc);
             }
         }
 
         // Start those who need starting
+        log().debug("Starting " + servicesToStart.size() + " services.");
         m_serviceManager.start(servicesToStart);
 
-        // Wait until we're interrupted
+        log().debug("Done starting the services. Keeping leadership until we're stopped.");
         try {
-            while(true) {
+            while (true) {
                 Thread.sleep(1000);
+                if (m_stopped) {
+                    break;
+                }
             }
         } catch (InterruptedException e) {
             // Reset the interrupted flag
             Thread.interrupted();
         } finally {
-            log().error("Relinquishing leadership.");
+            log().info("Relinquishing leadership.");
             m_leaderThread = null;
         }
+    }
+
+    public LeaderSelector getLeaderSelector() {
+        return m_leaderSelector;
+    }
+
+    @Required
+    public void setLeaderSelector(LeaderSelector leaderSelector) {
+        if (!m_stopped) {
+            throw new RuntimeException("The leader selector can only be set "
+                    + "when the service is stopped.");
+        }
+        m_leaderSelector = leaderSelector;
+    }
+
+    public ServiceConfigDao getServiceConfigDao() {
+        return m_serviceConfigDao;
+    }
+
+    public void setServiceConfigDao(ServiceConfigDao serviceConfigDao) {
+        m_serviceConfigDao = serviceConfigDao;
+    }
+
+    public ServiceManager getServiceManager() {
+        return m_serviceManager;
+    }
+
+    public void setServiceManager(ServiceManager serviceManager) {
+        m_serviceManager = serviceManager;
     }
 
     public ThreadCategory log() {
