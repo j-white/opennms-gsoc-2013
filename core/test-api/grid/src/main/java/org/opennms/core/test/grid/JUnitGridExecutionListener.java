@@ -45,6 +45,7 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
         }
 
         System.setProperty("hazelcast.logging.type", "log4j");
+        System.setProperty("java.net.preferIPv4Stack", "true");
     }
 
     public void beforeTestMethod(TestContext testContext) throws Exception {

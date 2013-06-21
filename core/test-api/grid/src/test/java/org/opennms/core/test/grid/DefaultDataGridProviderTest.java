@@ -28,12 +28,17 @@
 
 package org.opennms.core.test.grid;
 
+import static com.jayway.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertNotNull;
+
+import java.util.concurrent.Callable;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.opennms.core.grid.DataGridProviderFactory;
 import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.test.MockLogAppender;
 import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
@@ -42,33 +47,74 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 
+/**
+ * Run some sanity checks against the default data grid provider.
+ * 
+ * @author jwhite
+ */
 @RunWith(OpenNMSJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
         "classpath:/META-INF/opennms/applicationContext-soa.xml",
         "classpath*:/META-INF/opennms/component-dao.xml" })
 @JUnitGrid()
-public class HazelcastGridTest implements InitializingBean {
+public class DefaultDataGridProviderTest implements InitializingBean {
     @Autowired
     private DataGridProvider m_dataGridProvider = null;
 
+    /**
+     * The number of cluster members to test with.
+     */
+    private static int NUM_CLUSTER_MEMBERS = 3;
+
+    /**
+     * Ensure that a provider gets auto-wired if requested.
+     */
     @Override
     public void afterPropertiesSet() {
+        // Make sure that a provider gets auto-wired if requested
         assertNotNull(m_dataGridProvider);
     }
 
     @Before
     public void setUp() {
-        MockLogAppender.setupLogging(true, "DEBUG");
+        MockLogAppender.setupLogging(true, "INFO");
     }
 
+    /**
+     * Ensure the provider does not generate any warnings or higher during
+     * normal operations.
+     */
     @After
     public void tearDown() throws Exception {
         MockLogAppender.assertNoWarningsOrGreater();
     }
 
+    /**
+     * Ensure multiple members are able to join the cluster if multiple
+     * providers are instantiated.
+     */
     @Test
-    public void noWarningsOrGreater() {
-        // Initalize the client so that the log message are printed
-        m_dataGridProvider.getLock("mykey");
+    public void multipleClusterMembers() {
+        DataGridProvider dataGridProvider[] = new DataGridProvider[NUM_CLUSTER_MEMBERS];
+        for (int i = 0; i < NUM_CLUSTER_MEMBERS; i++) {
+            // Get a new instance as opposed to re-using the same one so that
+            // multiple members can be on the cluster
+            dataGridProvider[i] = DataGridProviderFactory.getNewInstance();
+            dataGridProvider[i].init();
+        }
+
+        for (int i = 0; i < NUM_CLUSTER_MEMBERS; i++) {
+            await().until(getNumClusterMembers(dataGridProvider[i]),
+                          is(NUM_CLUSTER_MEMBERS));
+        }
+    }
+
+    private Callable<Integer> getNumClusterMembers(
+            final DataGridProvider dataGridProvider) {
+        return new Callable<Integer>() {
+            public Integer call() throws Exception {
+                return dataGridProvider.getClusterMembers().size();
+            }
+        };
     }
 }

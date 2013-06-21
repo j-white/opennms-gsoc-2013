@@ -1,9 +1,11 @@
 package org.opennms.core.grid;
 
-public class DataGridFactory {
+import org.opennms.core.grid.hazelcast.HazelcastDataGridProvider;
+
+public class DataGridProviderFactory {
     private static DataGridProvider m_instance = null;
 
-    private DataGridFactory() {
+    private DataGridProviderFactory() {
 
     }
 
@@ -12,5 +14,9 @@ public class DataGridFactory {
             m_instance = new HazelcastDataGridProvider();
         }
         return m_instance;
+    }
+
+    public static DataGridProvider getNewInstance() {
+        return new HazelcastDataGridProvider();
     }
 }
