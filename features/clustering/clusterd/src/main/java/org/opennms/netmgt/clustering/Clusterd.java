@@ -43,24 +43,32 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Required;
 
 /**
- * The Clusterd daemon is responsible for electing a leader in the cluster and
- * having the leader run services which can not yet be distributed.
+ * Clusterd is responsible for electing a leader amongst the cluster members.
+ * 
+ * When a member is elected leader it will: -Start all of the vanilla services
+ * on the local JVM
+ * 
+ * Only one member may be leader at any given time.
  * 
  * @author jwhite
  */
 public class Clusterd extends AbstractServiceDaemon implements
         LeaderSelectorListener {
+    /**
+     * Daemon name.
+     */
     private static final String DAEMON_NAME = "Clusterd";
 
     /**
-     * The leader selector process used to elect a leader.
+     * Used to perform leader election.
      */
     private LeaderSelector m_leaderSelector;
 
     /**
-     * Thread handle to our leader handler. Only when we are the leader.
+     * Set to to the thread handle on which the takeLeadership() function is
+     * being run. Only set when we are the leader.
      */
-    private Thread m_leaderThread;
+    private Thread m_leaderThread = null;
 
     /**
      * Used to retrieve the list of services that are not automatically
@@ -79,10 +87,20 @@ public class Clusterd extends AbstractServiceDaemon implements
      */
     private boolean m_stopped = true;
 
+    /**
+     * Number of milliseconds used to sleep before checking the stopped flag
+     * when leader.
+     */
+    public static final int LEADER_SLEEP_MS = 500;
+
+    /**
+     * Default constructor.
+     */
     public Clusterd() {
         super("OpenNMS." + DAEMON_NAME);
     }
 
+    /** {@inheritDoc} */
     @Override
     protected void onInit() {
         if (m_serviceConfigDao == null) {
@@ -97,6 +115,7 @@ public class Clusterd extends AbstractServiceDaemon implements
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     protected void onStart() {
         assert (m_leaderSelector != null);
@@ -106,6 +125,7 @@ public class Clusterd extends AbstractServiceDaemon implements
         m_leaderSelector.start();
     }
 
+    /** {@inheritDoc} */
     @Override
     protected void onStop() {
         log().debug("Stopping the leader selector.");
@@ -116,6 +136,17 @@ public class Clusterd extends AbstractServiceDaemon implements
         m_stopped = true;
     }
 
+    /**
+     * Starts all of the vanilla services when leadership is acquired.
+     * 
+     * Services are started in the same order as they appear in the
+     * configuration file.
+     * 
+     * If an exception occurs while starting any of the services a call to
+     * Manager.doSystemExit() will be made, and another node will have the
+     * chance to become leader.
+     * 
+     */
     @Override
     public void takeLeadership() {
         log().info("Node was elected leader.");
@@ -136,7 +167,7 @@ public class Clusterd extends AbstractServiceDaemon implements
         log().debug("Done starting the services. Keeping leadership until we're stopped.");
         try {
             while (true) {
-                Thread.sleep(1000);
+                Thread.sleep(LEADER_SLEEP_MS);
                 if (m_stopped) {
                     break;
                 }
@@ -150,10 +181,20 @@ public class Clusterd extends AbstractServiceDaemon implements
         }
     }
 
+    /**
+     * <p>
+     * getLeaderSelector
+     * </p>
+     */
     public LeaderSelector getLeaderSelector() {
         return m_leaderSelector;
     }
 
+    /**
+     * <p>
+     * setLeaderSelector
+     * </p>
+     */
     @Required
     public void setLeaderSelector(LeaderSelector leaderSelector) {
         if (!m_stopped) {
@@ -163,22 +204,45 @@ public class Clusterd extends AbstractServiceDaemon implements
         m_leaderSelector = leaderSelector;
     }
 
+    /**
+     * <p>
+     * getServiceConfigDao
+     * </p>
+     */
     public ServiceConfigDao getServiceConfigDao() {
         return m_serviceConfigDao;
     }
 
+    /**
+     * <p>
+     * setServiceConfigDao
+     * </p>
+     */
     public void setServiceConfigDao(ServiceConfigDao serviceConfigDao) {
         m_serviceConfigDao = serviceConfigDao;
     }
 
+    /**
+     * <p>
+     * getServiceManager
+     * </p>
+     */
     public ServiceManager getServiceManager() {
         return m_serviceManager;
     }
 
+    /**
+     * <p>
+     * setServiceManager
+     * </p>
+     */
     public void setServiceManager(ServiceManager serviceManager) {
         m_serviceManager = serviceManager;
     }
 
+    /**
+     * Logger
+     */
     public ThreadCategory log() {
         return ThreadCategory.getInstance(getClass());
     }

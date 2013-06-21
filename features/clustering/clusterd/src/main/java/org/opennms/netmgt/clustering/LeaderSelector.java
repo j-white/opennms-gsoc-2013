@@ -39,8 +39,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Required;
 
 /**
- * Leader selector which uses a distributed lock obtained via the default grid
- * provider.
+ * This class is used to help select a leader amongst the cluster members:
+ * 
+ * A distributed lock obtained via the default grid provider.
  * 
  * When the lock is obtained, the listener is invoked. When the listener
  * function returns the lock is released and made available for another
@@ -51,18 +52,18 @@ import org.springframework.beans.factory.annotation.Required;
  */
 public class LeaderSelector implements Runnable {
     /**
-     * The listener we should invoke when we obtain the leader lock.
+     * Listener we should invoke when we obtain the leader lock.
      */
     private LeaderSelectorListener m_listener = null;
 
     /**
-     * The data grid provider used to obtain the distributed lock.
+     * Used to obtain the distributed lock.
      */
     @Autowired
     private DataGridProvider m_dataGridProvider = new HazelcastDataGridProvider();
 
     /**
-     * Thread for acquiring the lock.
+     * Thread used to acquire the lock.
      */
     private Thread m_thread = null;
 
@@ -82,6 +83,9 @@ public class LeaderSelector implements Runnable {
      */
     public static final String LEADER_LOCK_ID = "org.opennms.netmgt.clustering.LeaderSelector.LOCK";
 
+    /**
+     * Default constructor.
+     */
     public LeaderSelector() {
         // This method is intentionally left blank
     }
