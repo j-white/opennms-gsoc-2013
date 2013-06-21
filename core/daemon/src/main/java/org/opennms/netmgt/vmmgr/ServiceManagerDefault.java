@@ -29,7 +29,6 @@
 package org.opennms.netmgt.vmmgr;
 
 import java.lang.management.ManagementFactory;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.management.MBeanServer;
@@ -40,7 +39,11 @@ import org.opennms.netmgt.config.service.types.InvokeAtType;
 import org.opennms.netmgt.vmmgr.Invoker;
 
 /**
- * Used to start/stop services.
+ * Allows services to be started or stopped.
+ * 
+ * Services are added to a registry when started, and removed when stopped.
+ * The registry is used to iterate over all the services that have been
+ * started when a "status" query is issued.
  * 
  * @author jwhite
  * 
@@ -48,19 +51,31 @@ import org.opennms.netmgt.vmmgr.Invoker;
 public class ServiceManagerDefault implements ServiceManager {
     private MBeanServer m_mbeanServer;
 
+    /**
+     * Default constructor
+     */
     public ServiceManagerDefault() {
         m_mbeanServer = ManagementFactory.getPlatformMBeanServer();
     }
 
     /** {@inheritDoc} */
-    public void start(Service service) {
-        List<Service> servicesToStart = new ArrayList<Service>(1);
-        servicesToStart.add(service);
-        start(servicesToStart);
+    public void start(final List<Service> servicesToStart) {
+        start(servicesToStart, true);
     }
 
-    /** {@inheritDoc} */
-    public void start(List<Service> servicesToStart) {
+    /**
+     * Starts all of the services in the list.
+     * 
+     * The services are started in they same order as they appear.
+     * 
+     * @param servicesToStart
+     *            The list of services to start
+     * @param exitOnFailure
+     *            True if Manager.doSystemExit() should be called when a
+     *            service fails to start, false otherwise.
+     */
+    public void start(final List<Service> servicesToStart,
+            boolean exitOnFailure) {
         Invoker invoker = new Invoker();
         invoker.setServer(m_mbeanServer);
         invoker.setAtType(InvokeAtType.START);
@@ -76,11 +91,24 @@ public class ServiceManagerDefault implements ServiceManager {
                 String name = svc.getName();
                 String className = svc.getClassName();
 
-                String message = "An error occurred while attempting to start the \""
-                        + name + "\" service (class " + className + ").";
+                String message = String.format("An error occurred while attempting to "
+                                                       + "start the \"%s\" service (class %s)%s.",
+                                               name,
+                                               className,
+                                               exitOnFailure ? " Shutting down and exiting."
+                                                            : "");
                 log().fatal(message, result.getThrowable());
                 System.err.println(message);
                 result.getThrowable().printStackTrace();
+
+                if (exitOnFailure) {
+                    Manager manager = new Manager();
+                    manager.stop();
+                    manager.doSystemExit();
+
+                    // Shouldn't get here
+                    return;
+                }
 
                 continue;
             }
@@ -88,15 +116,8 @@ public class ServiceManagerDefault implements ServiceManager {
             // The service was successfully started, add it to the registry
             log().debug("Succesfully started "
                                 + result.getService().getName());
-            ServiceRegistry.getInstance().addService(result.getService());
+            ServiceRegister.getInstance().addService(result.getService());
         }
-    }
-
-    /** {@inheritDoc} */
-    public void stop(Service service) {
-        List<Service> servicesToStop = new ArrayList<Service>(1);
-        servicesToStop.add(service);
-        stop(servicesToStop);
     }
 
     /** {@inheritDoc} */
@@ -104,9 +125,12 @@ public class ServiceManagerDefault implements ServiceManager {
         Invoker invoker = new Invoker();
         invoker.setServer(m_mbeanServer);
         invoker.setAtType(InvokeAtType.STOP);
+        invoker.setReverse(true);
+        invoker.setFailFast(false);
+
         List<InvokerService> services = InvokerService.createServiceList(servicesToStop);
         invoker.setServices(services);
-        invoker.instantiateClasses();
+        invoker.getObjectInstances();
 
         List<InvokerResult> resultInfo = invoker.invokeMethods();
 
@@ -115,16 +139,19 @@ public class ServiceManagerDefault implements ServiceManager {
                 // The service was stopped, remove it from the registry
                 log().debug("Succesfully stopped "
                                     + result.getService().getName());
-                ServiceRegistry.getInstance().removeService(result.getService());
+                ServiceRegister.getInstance().removeService(result.getService());
             }
         }
     }
 
     /** {@inheritDoc} */
     public boolean isStarted(Service service) {
-        return ServiceRegistry.getInstance().getServices().contains(service);
+        return ServiceRegister.getInstance().getServices().contains(service);
     }
 
+    /**
+     * Logger
+     */
     private ThreadCategory log() {
         return ThreadCategory.getInstance(getClass());
     }

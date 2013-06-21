@@ -33,10 +33,7 @@ import java.util.List;
 import org.opennms.netmgt.config.service.Service;
 
 /**
- * Allows services to be started/stopped after the manager has been started.
- * 
- * TODO: Move this in with manager code and have the manager use this same
- * interface.
+ * Allows services to be started or stopped.
  * 
  * @author jwhite
  * 
@@ -44,38 +41,26 @@ import org.opennms.netmgt.config.service.Service;
 public interface ServiceManager {
 
     /**
-     * Starts a single service.
-     * 
-     * @param service
-     *            The service to start
-     */
-    public void start(Service service);
-
-    /**
      * Starts all of the services in the list. The services are started in
      * they same order as they appear.
+     * 
+     * Manager.doSystemExit() will be called if an exception occurs while
+     * trying to start any of the services.
      * 
      * @param servicesToStart
      *            The list of services to start
      */
-    public void start(List<Service> servicesToStart);
+    public void start(final List<Service> servicesToStart);
 
     /**
-     * Stops a single service.
+     * Stops all of the services in the list.
      * 
-     * @param service
-     *            The service to stop
-     */
-    public void stop(Service service);
-
-    /**
-     * Stops all of the services in the list. The services are stopped in they
-     * same order as they appear.
+     * The services are stopped in <b>reversed</b> order.
      * 
      * @param servicesToStop
      *            The list of services to stop
      */
-    public void stop(List<Service> servicesToStop);
+    public void stop(final List<Service> servicesToStop);
 
     /**
      * Checks if a service is started or not.
@@ -84,5 +69,5 @@ public interface ServiceManager {
      *            The service to check
      * @return True if the service is started, false otherwise
      */
-    boolean isStarted(Service service);
+    boolean isStarted(final Service service);
 }

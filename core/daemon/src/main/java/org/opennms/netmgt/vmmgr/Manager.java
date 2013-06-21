@@ -45,13 +45,12 @@ import org.apache.log4j.LogManager;
 import org.opennms.core.utils.ThreadCategory;
 import org.opennms.netmgt.config.service.Service;
 import org.opennms.netmgt.config.service.types.InvokeAtType;
-import org.opennms.netmgt.config.service.types.ServiceType;
 import org.opennms.netmgt.icmp.Pinger;
 import org.opennms.netmgt.icmp.PingerFactory;
 
 /**
  * <p>
- * The Manager is reponsible for launching/starting all services in the VM
+ * The Manager is responsible for launching/starting all services in the VM
  * that it is started for. The Manager operates in two modes, normal and
  * server
  * </p>
@@ -64,7 +63,7 @@ import org.opennms.netmgt.icmp.PingerFactory;
  * <p>
  * server mode: In the server mode, the Manager starts up and listens on the
  * 'control-broadcast' JMS topic for 'start' control messages for services in
- * its VM and a stop control messge for itself. When a start for a service is
+ * its VM and a stop control message for itself. When a start for a service is
  * received, it launches only that service and sends a successful 'running' or
  * an 'error' response to the Controller
  * </p>
@@ -99,17 +98,10 @@ public class Manager implements ManagerMBean {
     
     private void stop(MBeanServer server) {
         log().debug("Beginning shutdown");
-        Invoker invoker = new Invoker();
-        invoker.setServer(server);
-        invoker.setAtType(InvokeAtType.STOP);
-        invoker.setReverse(true);
-        invoker.setFailFast(false);
 
-        List<Service> servicesToStop = Invoker.getDefaultServiceConfigFactory().getServicesWithoutType(ServiceType.VANILLA);
-        List<InvokerService> services = InvokerService.createServiceList(servicesToStop);
-        invoker.setServices(services);
-        invoker.getObjectInstances();
-        invoker.invokeMethods();
+        ServiceManager serviceManager = new ServiceManagerDefault();
+        List<Service> allServicesStarted = ServiceRegister.getInstance().getServices();
+        serviceManager.stop(allServicesStarted);
 
         log().debug("Shutdown complete");
     }
@@ -137,7 +129,7 @@ public class Manager implements ManagerMBean {
         invoker.setAtType(InvokeAtType.STATUS);
         invoker.setFailFast(false);
 
-        final List<InvokerService> services = InvokerService.createServiceList(ServiceRegistry.getInstance().getServices());
+        final List<InvokerService> services = InvokerService.createServiceList(ServiceRegister.getInstance().getServices());
         invoker.setServices(services);
         invoker.getObjectInstances();
         final List<InvokerResult> results = invoker.invokeMethods();
