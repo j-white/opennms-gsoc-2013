@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 
 import org.opennms.core.grid.DataGridProvider;
-import org.opennms.core.grid.HazelcastDataGridProvider;
 
 import org.opennms.core.utils.ThreadCategory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,7 +59,7 @@ public class LeaderSelector implements Runnable {
      * Used to obtain the distributed lock.
      */
     @Autowired
-    private DataGridProvider m_dataGridProvider = new HazelcastDataGridProvider();
+    private DataGridProvider m_dataGridProvider = null;
 
     /**
      * Thread used to acquire the lock.
