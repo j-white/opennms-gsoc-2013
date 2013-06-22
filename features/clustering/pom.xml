@@ -11,9 +11,10 @@
   <packaging>pom</packaging>
   <name>OpenNMS Clustering Support</name>
   <description>
-    Set of clustering related services.
+    Cluster related tools and services.
   </description>
   <modules>
     <module>clusterd</module>
+    <module>utils</module>
   </modules>
 </project>
