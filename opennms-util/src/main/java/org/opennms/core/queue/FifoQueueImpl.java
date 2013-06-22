@@ -28,6 +28,7 @@
 
 package org.opennms.core.queue;
 
+import java.io.Serializable;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +44,9 @@ import java.util.concurrent.TimeUnit;
  *
  * @author <a href="mailto:weave@oculan.com">Brian Weaver </a>
  */
-public class FifoQueueImpl<T> implements FifoQueue<T> {
+public class FifoQueueImpl<T> implements FifoQueue<T>, Serializable {
+    private static final long serialVersionUID = -7116739903879369414L;
+
     /**
      * The delegate list where queue elements are stored. The elements are
      * removed from the front of the list and added to the end of the list,
