@@ -93,6 +93,21 @@ public final class VacuumdConfigFactory {
     }
 
     /**
+     * <p>
+     * Constructor for VacuumdConfigFactory.
+     * </p>
+     * 
+     * Calling reload() on a instance created with method will have no effect.
+     * 
+     * @param config 
+     *          The configuration the use.
+     */
+    public VacuumdConfigFactory(VacuumdConfiguration config) {
+        m_config = config;
+        m_loadedFromFile = false;
+    }
+
+    /**
      * Load the config from the default config file and create the singleton
      * instance of this factory.
      *
