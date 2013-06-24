@@ -1,8 +1,8 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2006-2012 The OpenNMS Group, Inc.
- * OpenNMS(R) is Copyright (C) 1999-2012 The OpenNMS Group, Inc.
+ * Copyright (C) 2006-2013 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2013 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
  *
@@ -29,59 +29,76 @@
 package org.opennms.netmgt.vacuumd;
 
 import org.opennms.netmgt.scheduler.ScheduleInterval;
+
 /**
- * <p>AutomationInterval class.</p>
- *
+ * <p>
+ * AutomationInterval class.
+ * </p>
+ * 
  * @author <a href="mailto:david@opennms.org">David Hustace</a>
  * @version $Id: $
  */
 public class AutomationInterval implements ScheduleInterval {
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see org.opennms.netmgt.scheduler.ScheduleInterval#getInterval()
      */
-    
+
     private long m_interval;
-    
+
     /**
-     * <p>Constructor for AutomationInterval.</p>
-     *
-     * @param interval a long.
+     * <p>
+     * Constructor for AutomationInterval.
+     * </p>
+     * 
+     * @param interval
+     *            a long.
      */
     public AutomationInterval(long interval) {
         setInterval(interval);
     }
-    
+
     /**
-     * <p>getInterval</p>
-     *
+     * <p>
+     * getInterval
+     * </p>
+     * 
      * @return a long.
      */
     @Override
     public long getInterval() {
         return m_interval;
     }
-    
+
     /**
-     * <p>setInterval</p>
-     *
-     * @param interval a long.
+     * <p>
+     * setInterval
+     * </p>
+     * 
+     * @param interval
+     *            a long.
      */
     public void setInterval(long interval) {
         m_interval = interval;
     }
 
-    /* (non-Javadoc)
-     * @see org.opennms.netmgt.scheduler.ScheduleInterval#scheduledSuspension()
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * org.opennms.netmgt.scheduler.ScheduleInterval#scheduledSuspension()
      */
     /**
-     * <p>scheduledSuspension</p>
-     *
+     * <p>
+     * scheduledSuspension
+     * </p>
+     * 
      * @return a boolean.
      */
     @Override
     public boolean scheduledSuspension() {
-        // TODO Auto-generated method stub
         return false;
     }
 

@@ -1,8 +1,8 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2006-2012 The OpenNMS Group, Inc.
- * OpenNMS(R) is Copyright (C) 1999-2012 The OpenNMS Group, Inc.
+ * Copyright (C) 2006-2013 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2013 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
  *
@@ -32,9 +32,9 @@ import org.opennms.netmgt.eventd.EventIpcManagerFactory;
 import org.opennms.netmgt.model.events.EventIpcManager;
 
 /**
- * Implementws the VacuumdMBead interface and delegeates the mbean
+ * Implements the VacuumdMBead interface and delegates the mbean
  * implementation to the single Vacuumd.
- *
+ * 
  * @author ranger
  * @version $Id: $
  */
@@ -46,11 +46,12 @@ public class Vacuumd implements VacuumdMBean {
      * @see org.opennms.netmgt.vacuumd.jmx.VacuumdMBean#init()
      */
     /**
-     * <p>init</p>
+     * <p>
+     * init
+     * </p>
      */
     @Override
     public void init() {
-
         EventIpcManagerFactory.init();
         EventIpcManager mgr = EventIpcManagerFactory.getIpcManager();
         getVacuumd().setEventManager(mgr);
@@ -64,7 +65,9 @@ public class Vacuumd implements VacuumdMBean {
      * @see org.opennms.netmgt.vacuumd.jmx.VacuumdMBean#start()
      */
     /**
-     * <p>start</p>
+     * <p>
+     * start
+     * </p>
      */
     @Override
     public void start() {
@@ -77,7 +80,9 @@ public class Vacuumd implements VacuumdMBean {
      * @see org.opennms.netmgt.vacuumd.jmx.VacuumdMBean#stop()
      */
     /**
-     * <p>stop</p>
+     * <p>
+     * stop
+     * </p>
      */
     @Override
     public void stop() {
@@ -90,8 +95,10 @@ public class Vacuumd implements VacuumdMBean {
      * @see org.opennms.netmgt.vacuumd.jmx.VacuumdMBean#getStatus()
      */
     /**
-     * <p>getStatus</p>
-     *
+     * <p>
+     * getStatus
+     * </p>
+     * 
      * @return a int.
      */
     @Override
@@ -105,8 +112,10 @@ public class Vacuumd implements VacuumdMBean {
      * @see org.opennms.netmgt.vacuumd.jmx.VacuumdMBean#status()
      */
     /**
-     * <p>status</p>
-     *
+     * <p>
+     * status
+     * </p>
+     * 
      * @return a {@link java.lang.String} object.
      */
     @Override
@@ -120,8 +129,10 @@ public class Vacuumd implements VacuumdMBean {
      * @see org.opennms.netmgt.vacuumd.jmx.VacuumdMBean#getStatusText()
      */
     /**
-     * <p>getStatusText</p>
-     *
+     * <p>
+     * getStatusText
+     * </p>
+     * 
      * @return a {@link java.lang.String} object.
      */
     @Override

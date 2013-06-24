@@ -1,8 +1,8 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2007-2012 The OpenNMS Group, Inc.
- * OpenNMS(R) is Copyright (C) 1999-2012 The OpenNMS Group, Inc.
+ * Copyright (C) 2007-2013 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2013 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
  *
@@ -29,8 +29,10 @@
 package org.opennms.netmgt.vacuumd;
 
 /**
- * <p>AutomationException class.</p>
- *
+ * <p>
+ * AutomationException class.
+ * </p>
+ * 
  * @author <a href="mailto:brozow@opennms.org">Mathew Brozowski</a>
  * @version $Id: $
  */
@@ -39,31 +41,41 @@ public class AutomationException extends RuntimeException {
     private static final long serialVersionUID = -8873671974245928627L;
 
     /**
-	 * <p>Constructor for AutomationException.</p>
-	 *
-	 * @param arg0 a {@link java.lang.String} object.
-	 */
-	public AutomationException(String arg0) {
-		super(arg0);
-	}
+     * <p>
+     * Constructor for AutomationException.
+     * </p>
+     * 
+     * @param arg0
+     *            a {@link java.lang.String} object.
+     */
+    public AutomationException(String arg0) {
+        super(arg0);
+    }
 
-	/**
-	 * <p>Constructor for AutomationException.</p>
-	 *
-	 * @param arg0 a {@link java.lang.Throwable} object.
-	 */
-	public AutomationException(Throwable arg0) {
-		super(arg0);
-	}
+    /**
+     * <p>
+     * Constructor for AutomationException.
+     * </p>
+     * 
+     * @param arg0
+     *            a {@link java.lang.Throwable} object.
+     */
+    public AutomationException(Throwable arg0) {
+        super(arg0);
+    }
 
-	/**
-	 * <p>Constructor for AutomationException.</p>
-	 *
-	 * @param arg0 a {@link java.lang.String} object.
-	 * @param arg1 a {@link java.lang.Throwable} object.
-	 */
-	public AutomationException(String arg0, Throwable arg1) {
-		super(arg0, arg1);
-	}
+    /**
+     * <p>
+     * Constructor for AutomationException.
+     * </p>
+     * 
+     * @param arg0
+     *            a {@link java.lang.String} object.
+     * @param arg1
+     *            a {@link java.lang.Throwable} object.
+     */
+    public AutomationException(String arg0, Throwable arg1) {
+        super(arg0, arg1);
+    }
 
 }
