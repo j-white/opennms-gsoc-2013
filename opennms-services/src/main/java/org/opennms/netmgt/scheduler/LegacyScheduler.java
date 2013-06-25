@@ -43,10 +43,10 @@ import org.opennms.core.utils.ThreadCategory;
 import org.springframework.util.Assert;
 
 /**
- * This class implements a simple scheduler to ensure the polling occurs at the
- * expected intervals. The scheduler employees a dynamic thread pool that adjust
- * to the load until a maximum thread count is reached.
- *
+ * This class implements a simple scheduler to ensure the polling occurs at
+ * the expected intervals. The scheduler employees a dynamic thread pool that
+ * adjust to the load until a maximum thread count is reached.
+ * 
  * @author <a href="mailto:mike@opennms.org">Mike Davidson </a>
  * @author <a href="mailto:weave@oculan.com">Brian Weaver </a>
  * @author <a href="http://www.opennms.org/">OpenNMS </a>
@@ -54,13 +54,14 @@ import org.springframework.util.Assert;
 public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
     /**
      * The map of queue that contain {@link ReadyRunnable ready runnable}
-     * instances. The queues are mapped according to the interval of scheduling.
+     * instances. The queues are mapped according to the interval of
+     * scheduling.
      */
     private Map<Long, PeekableFifoQueue<ReadyRunnable>> m_queues;
 
     /**
-     * The total number of elements currently scheduled. This should be the sum
-     * of all the elements in the various queues.
+     * The total number of elements currently scheduled. This should be the
+     * sum of all the elements in the various queues.
      */
     private int m_scheduled;
 
@@ -86,6 +87,8 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
      * 
      */
     public static final class PeekableFifoQueue<T> extends FifoQueueImpl<T> {
+        private static final long serialVersionUID = -9029090834112380262L;
+
         /**
          * This method allows the caller to peek at the next object that would
          * be returned on a <code>remove</code> call. If the queue is
@@ -109,9 +112,9 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
     /**
      * Constructs a new instance of the scheduler. The maximum number of
      * executable threads is specified in the constructor. The executable
-     * threads are part of a runnable thread pool where the scheduled runnables
-     * are executed.
-     *
+     * threads are part of a runnable thread pool where the scheduled
+     * runnables are executed.
+     * 
      * @param parent
      *            String prepended to "Scheduler" to create fiber name
      * @param maxSize
@@ -119,10 +122,11 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
      */
     public LegacyScheduler(String parent, int maxSize) {
         m_status = START_PENDING;
-        m_runner = Executors.newFixedThreadPool(
-            maxSize,
-            new LogPreservingThreadFactory(getClass().getSimpleName(), maxSize, false)
-        );
+        m_runner = Executors.newFixedThreadPool(maxSize,
+                                                new LogPreservingThreadFactory(
+                                                                               getClass().getSimpleName(),
+                                                                               maxSize,
+                                                                               false));
         m_queues = new ConcurrentSkipListMap<Long, PeekableFifoQueue<ReadyRunnable>>();
         m_scheduled = 0;
         m_worker = null;
@@ -131,9 +135,9 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
     /**
      * Constructs a new instance of the scheduler. The maximum number of
      * executable threads is specified in the constructor. The executable
-     * threads are part of a runnable thread pool where the scheduled runnables
-     * are executed.
-     *
+     * threads are part of a runnable thread pool where the scheduled
+     * runnables are executed.
+     * 
      * @param parent
      *            String prepended to "Scheduler" to create fiber name
      * @param maxSize
@@ -145,7 +149,8 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
      *            The high water mark ratio of thread size to threads when
      *            threads are started.
      */
-    public LegacyScheduler(String parent, int maxSize, float lowMark, float hiMark) {
+    public LegacyScheduler(String parent, int maxSize, float lowMark,
+            float hiMark) {
         this(parent, maxSize);
     }
 
@@ -153,7 +158,7 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
      * This method is used to schedule a ready runnable in the system. The
      * interval is used as the key for determining which queue to add the
      * runnable.
-     *
+     * 
      * @param runnable
      *            The element to run when interval expires.
      * @param interval
@@ -163,7 +168,8 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
      */
     public synchronized void schedule(ReadyRunnable runnable, long interval) {
         if (log().isDebugEnabled()) {
-            log().debug("schedule: Adding ready runnable "+runnable+" at interval " + interval);
+            log().debug("schedule: Adding ready runnable " + runnable
+                                + " at interval " + interval);
         }
 
         Long key = Long.valueOf(interval);
@@ -183,57 +189,57 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
                 log().debug("schedule: queue element added, notification not performed");
             }
         } catch (InterruptedException e) {
-            log().info("schedule: failed to add new ready runnable instance " + runnable + " to scheduler: " + e, e);
+            log().info("schedule: failed to add new ready runnable instance "
+                               + runnable + " to scheduler: " + e, e);
             Thread.currentThread().interrupt();
         }
     }
 
-    /* (non-Javadoc)
-	 * @see org.opennms.netmgt.scheduler.Scheduler#schedule(long, org.opennms.netmgt.scheduler.ReadyRunnable)
-	 */
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.opennms.netmgt.scheduler.Scheduler#schedule(long,
+     * org.opennms.netmgt.scheduler.ReadyRunnable)
+     */
     /** {@inheritDoc} */
     @Override
-    public synchronized void schedule(long interval, final ReadyRunnable runnable) {
-        final long timeToRun = getCurrentTime()+interval;
-        ReadyRunnable timeKeeper = new ReadyRunnable() {
-            @Override
-            public boolean isReady() {
-                return getCurrentTime() >= timeToRun && runnable.isReady();
-            }
-            
-            @Override
-            public void run() {
-                runnable.run();
-            }
-            
-            @Override
-            public String toString() { return runnable.toString()+" (ready in "+Math.max(0, timeToRun-getCurrentTime())+"ms)"; }
-        };
-        schedule(timeKeeper, interval);
+    public synchronized void schedule(long interval,
+            final ReadyRunnable runnable) {
+        final long timeToRun = getCurrentTime() + interval;
+        schedule(new ScheduleTimeKeeper(runnable, timeToRun), interval);
     }
-    
-    /* (non-Javadoc)
-	 * @see org.opennms.netmgt.scheduler.Scheduler#getCurrentTime()
-	 */
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.opennms.netmgt.scheduler.Scheduler#getCurrentTime()
+     */
     /**
-     * <p>getCurrentTime</p>
-     *
+     * <p>
+     * getCurrentTime
+     * </p>
+     * 
      * @return a long.
      */
     @Override
     public long getCurrentTime() {
         return System.currentTimeMillis();
     }
-    
-    /* (non-Javadoc)
-	 * @see org.opennms.netmgt.scheduler.Scheduler#start()
-	 */
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.opennms.netmgt.scheduler.Scheduler#start()
+     */
     /**
-     * <p>start</p>
+     * <p>
+     * start
+     * </p>
      */
     @Override
     public synchronized void start() {
-        Assert.state(m_worker == null, "The fiber has already run or is running");
+        Assert.state(m_worker == null,
+                     "The fiber has already run or is running");
 
         m_worker = new Thread(this, getName());
         m_worker.start();
@@ -242,11 +248,15 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
         log().info("start: scheduler started");
     }
 
-    /* (non-Javadoc)
-	 * @see org.opennms.netmgt.scheduler.Scheduler#stop()
-	 */
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.opennms.netmgt.scheduler.Scheduler#stop()
+     */
     /**
-     * <p>stop</p>
+     * <p>
+     * stop
+     * </p>
      */
     @Override
     public synchronized void stop() {
@@ -259,16 +269,21 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
         log().info("stop: scheduler stopped");
     }
 
-    /* (non-Javadoc)
-	 * @see org.opennms.netmgt.scheduler.Scheduler#pause()
-	 */
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.opennms.netmgt.scheduler.Scheduler#pause()
+     */
     /**
-     * <p>pause</p>
+     * <p>
+     * pause
+     * </p>
      */
     @Override
     public synchronized void pause() {
         Assert.state(m_worker != null, "The fiber has never been started");
-        Assert.state(m_status != STOPPED && m_status != STOP_PENDING, "The fiber is not running or a stop is pending");
+        Assert.state(m_status != STOPPED && m_status != STOP_PENDING,
+                     "The fiber is not running or a stop is pending");
 
         if (m_status == PAUSED) {
             return;
@@ -278,16 +293,21 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
         notifyAll();
     }
 
-    /* (non-Javadoc)
-	 * @see org.opennms.netmgt.scheduler.Scheduler#resume()
-	 */
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.opennms.netmgt.scheduler.Scheduler#resume()
+     */
     /**
-     * <p>resume</p>
+     * <p>
+     * resume
+     * </p>
      */
     @Override
     public synchronized void resume() {
         Assert.state(m_worker != null, "The fiber has never been started");
-        Assert.state(m_status != STOPPED && m_status != STOP_PENDING, "The fiber is not running or a stop is pending");
+        Assert.state(m_status != STOPPED && m_status != STOP_PENDING,
+                     "The fiber is not running or a stop is pending");
 
         if (m_status == RUNNING) {
             return;
@@ -297,12 +317,16 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
         notifyAll();
     }
 
-    /* (non-Javadoc)
-	 * @see org.opennms.netmgt.scheduler.Scheduler#getStatus()
-	 */
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.opennms.netmgt.scheduler.Scheduler#getStatus()
+     */
     /**
-     * <p>getStatus</p>
-     *
+     * <p>
+     * getStatus
+     * </p>
+     * 
      * @return a int.
      */
     @Override
@@ -315,17 +339,17 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
 
     /**
      * Returns the name of this fiber.
-     *
+     * 
      * @return a {@link java.lang.String} object.
      */
     @Override
     public String getName() {
         return m_runner.toString();
     }
-    
+
     /**
      * Returns total number of elements currently scheduled.
-     *
+     * 
      * @return the sum of all the elements in the various queues
      */
     public int getScheduled() {
@@ -335,7 +359,7 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
     /**
      * Returns the pool of threads that are used to executed the runnable
      * instances scheduled by the class' instance.
-     *
+     * 
      * @return thread pool
      */
     public ExecutorService getRunner() {
@@ -343,9 +367,9 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
     }
 
     /**
-     * The main method of the scheduler. This method is responsible for checking
-     * the runnable queues for ready objects and then enqueuing them into the
-     * thread pool for execution.
+     * The main method of the scheduler. This method is responsible for
+     * checking the runnable queues for ready objects and then enqueuing them
+     * into the thread pool for execution.
      */
     @Override
     public void run() {
@@ -356,20 +380,22 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
         log().debug("run: scheduler running");
 
         /*
-         * Loop until a fatal exception occurs or until
-         * the thread is interrupted.
+         * Loop until a fatal exception occurs or until the thread is
+         * interrupted.
          */
         for (;;) {
             /*
-             * Block if there is nothing in the queue(s).
-             * When something is added to the queue it
-             * signals us to wakeup.
+             * Block if there is nothing in the queue(s). When something is
+             * added to the queue it signals us to wakeup.
              */
             synchronized (this) {
-                
-                if (m_status != RUNNING && m_status != PAUSED && m_status != PAUSE_PENDING && m_status != RESUME_PENDING) {
+
+                if (m_status != RUNNING && m_status != PAUSED
+                        && m_status != PAUSE_PENDING
+                        && m_status != RESUME_PENDING) {
                     if (log().isDebugEnabled()) {
-                        log().debug("run: status = " + m_status + ", time to exit");
+                        log().debug("run: status = " + m_status
+                                            + ", time to exit");
                     }
                     break;
                 }
@@ -392,7 +418,7 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
 
                 if (m_status == RESUME_PENDING) {
                     log().debug("run: resuming.");
-                    
+
                     m_status = RUNNING;
                 }
 
@@ -407,25 +433,24 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
             }
 
             /*
-             * Cycle through the queues checking for
-             * what's ready to run.  The queues are keyed
-             * by the interval, but the mapped elements
-             * are peekable fifo queues.
+             * Cycle through the queues checking for what's ready to run. The
+             * queues are keyed by the interval, but the mapped elements are
+             * peekable fifo queues.
              */
             int runned = 0;
             synchronized (m_queues) {
                 /*
-                 * Get an iterator so that we can cycle
-                 * through the queue elements.
+                 * Get an iterator so that we can cycle through the queue
+                 * elements.
                  */
                 for (Entry<Long, PeekableFifoQueue<ReadyRunnable>> entry : m_queues.entrySet()) {
                     /*
-                     * Peak for Runnable objects until
-                     * there are no more ready runnables.
-                     *
-                     * Also, only go through each queue once!
-                     * if we didn't add a count then it would
-                     * be possible to starve other queues.
+                     * Peak for Runnable objects until there are no more ready
+                     * runnables.
+                     * 
+                     * Also, only go through each queue once! if we didn't add
+                     * a count then it would be possible to starve other
+                     * queues.
                      */
                     PeekableFifoQueue<ReadyRunnable> in = entry.getValue();
                     ReadyRunnable readyRun = null;
@@ -435,7 +460,8 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
                             readyRun = in.peek();
                             if (readyRun != null && readyRun.isReady()) {
                                 if (log().isDebugEnabled()) {
-                                    log().debug("run: found ready runnable "+readyRun);
+                                    log().debug("run: found ready runnable "
+                                                        + readyRun);
                                 }
 
                                 /*
@@ -443,6 +469,12 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
                                  * queue for execution.
                                  */
                                 in.remove();
+
+                                // Set the scheduler if the interface is
+                                // implemented
+                                if (readyRun instanceof SchedulerAware) {
+                                    ((SchedulerAware) readyRun).setScheduler(this);
+                                }
 
                                 // Add runnable to the execution queue
                                 m_runner.execute(readyRun);
@@ -454,14 +486,14 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
                             throw new UndeclaredThrowableException(e);
                         }
 
-                    } while (readyRun != null && readyRun.isReady() && --maxLoops > 0);
+                    } while (readyRun != null && readyRun.isReady()
+                            && --maxLoops > 0);
                 }
             }
 
             /*
-             * Wait for 1 second if there were no runnables
-             * executed during this loop, otherwise just
-             * start over.
+             * Wait for 1 second if there were no runnables executed during
+             * this loop, otherwise just start over.
              */
             synchronized (this) {
                 m_scheduled -= runned;
