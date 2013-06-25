@@ -44,6 +44,7 @@ import java.util.List;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
@@ -63,6 +64,7 @@ public class Actions implements Serializable {
     /**
      * actions modify the database based on results of a trigger
      */
+    @XmlElement(name="action")
     private List<Action> _actionList = new ArrayList<Action>(0);
 
     // ----------------/

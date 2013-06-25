@@ -1,87 +1,125 @@
-/*
- * This class was automatically generated with 
- * <a href="http://www.castor.org">Castor 1.1.2.1</a>, using an XML
- * Schema.
- * $Id$
- */
+/*******************************************************************************
+ * This file is part of OpenNMS(R).
+ *
+ * Copyright (C) 2013 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2013 The OpenNMS Group, Inc.
+ *
+ * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
+ *
+ * OpenNMS(R) is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published
+ * by the Free Software Foundation, either version 3 of the License,
+ * or (at your option) any later version.
+ *
+ * OpenNMS(R) is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with OpenNMS(R).  If not, see:
+ *      http://www.gnu.org/licenses/
+ *
+ * For more information contact:
+ *     OpenNMS(R) Licensing <license@opennms.org>
+ *     http://www.opennms.org/
+ *     http://www.opennms.com/
+ *******************************************************************************/
 
+/**
+ * This class was original generated with Castor, but is no longer.
+ */
 package org.opennms.netmgt.config.vacuumd;
 
-  //---------------------------------/
- //- Imported classes and packages -/
+//---------------------------------/
+//- Imported classes and packages -/
 //---------------------------------/
 
-import org.exolab.castor.xml.Marshaller;
-import org.exolab.castor.xml.Unmarshaller;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.Iterator;
+import java.util.List;
+
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * Class ActionEvent.
  * 
  * @version $Revision$ $Date$
  */
+@XmlRootElement(name = "action-event")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class ActionEvent implements Serializable {
+    private static final long serialVersionUID = 1286974132304106079L;
 
-@SuppressWarnings("all") public class ActionEvent implements java.io.Serializable {
+    private static final boolean DEFAULT_FOR_EACH_RESULT_FLAG = false;
 
+    private static final boolean DEFAULT_ADD_ALL_PARMS_FLAG = false;
 
-      //--------------------------/
-     //- Class/Member Variables -/
-    //--------------------------/
+    // --------------------------/
+    // - Class/Member Variables -/
+    // --------------------------/
 
     /**
      * Field _name.
      */
-    private java.lang.String _name;
+    @XmlAttribute(name = "name")
+    private String _name;
 
     /**
      * Field _forEachResult.
      */
-    private boolean _forEachResult = false;
-
-    /**
-     * keeps track of state for field: _forEachResult
-     */
-    private boolean _has_forEachResult;
+    @XmlAttribute(name = "for-each-result")
+    private Boolean _forEachResult;
 
     /**
      * Field _addAllParms.
      */
-    private boolean _addAllParms = false;
-
-    /**
-     * keeps track of state for field: _addAllParms
-     */
-    private boolean _has_addAllParms;
+    @XmlAttribute(name = "add-all-parms")
+    private Boolean _addAllParms;
 
     /**
      * Field _assignmentList.
      */
-    private java.util.List<org.opennms.netmgt.config.vacuumd.Assignment> _assignmentList;
+    @XmlElement(name = "assignment")
+    private List<Assignment> _assignmentList = new ArrayList<Assignment>(0);
 
-
-      //----------------/
-     //- Constructors -/
-    //----------------/
+    // ----------------/
+    // - Constructors -/
+    // ----------------/
 
     public ActionEvent() {
         super();
-        this._assignmentList = new java.util.ArrayList<org.opennms.netmgt.config.vacuumd.Assignment>();
     }
 
+    public ActionEvent(final String name, final boolean forEachResult,
+            final boolean addAllParms, final List<Assignment> assignments) {
+        super();
+        setName(name);
+        setForEachResult(forEachResult);
+        setAddAllParms(addAllParms);
+        setAssignment(assignments);
+    }
 
-      //-----------/
-     //- Methods -/
-    //-----------/
+    // -----------/
+    // - Methods -/
+    // -----------/
 
     /**
      * 
      * 
      * @param vAssignment
-     * @throws java.lang.IndexOutOfBoundsException if the index
-     * given is outside the bounds of the collection
+     * @throws IndexOutOfBoundsException
+     *             if the index given is outside the bounds of the collection
      */
-    public void addAssignment(
-            final org.opennms.netmgt.config.vacuumd.Assignment vAssignment)
-    throws java.lang.IndexOutOfBoundsException {
+    public void addAssignment(final Assignment vAssignment)
+            throws IndexOutOfBoundsException {
         this._assignmentList.add(vAssignment);
     }
 
@@ -90,81 +128,59 @@ import org.exolab.castor.xml.Unmarshaller;
      * 
      * @param index
      * @param vAssignment
-     * @throws java.lang.IndexOutOfBoundsException if the index
-     * given is outside the bounds of the collection
+     * @throws IndexOutOfBoundsException
+     *             if the index given is outside the bounds of the collection
      */
-    public void addAssignment(
-            final int index,
-            final org.opennms.netmgt.config.vacuumd.Assignment vAssignment)
-    throws java.lang.IndexOutOfBoundsException {
+    public void addAssignment(final int index, final Assignment vAssignment)
+            throws IndexOutOfBoundsException {
         this._assignmentList.add(index, vAssignment);
-    }
-
-    /**
-     */
-    public void deleteAddAllParms(
-    ) {
-        this._has_addAllParms= false;
-    }
-
-    /**
-     */
-    public void deleteForEachResult(
-    ) {
-        this._has_forEachResult= false;
     }
 
     /**
      * Method enumerateAssignment.
      * 
-     * @return an Enumeration over all possible elements of this
-     * collection
+     * @return an Enumeration over all possible elements of this collection
      */
-    public java.util.Enumeration<org.opennms.netmgt.config.vacuumd.Assignment> enumerateAssignment(
-    ) {
-        return java.util.Collections.enumeration(this._assignmentList);
+    public Enumeration<Assignment> enumerateAssignment() {
+        return Collections.enumeration(this._assignmentList);
     }
 
     /**
-     * Overrides the java.lang.Object.equals method.
+     * Overrides the Object.equals method.
      * 
      * @param obj
      * @return true if the objects are equal.
      */
-    @Override()
-    public boolean equals(
-            final java.lang.Object obj) {
-        if ( this == obj )
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
             return true;
-        
-        if (obj instanceof ActionEvent) {
-        
-            ActionEvent temp = (ActionEvent)obj;
-            if (this._name != null) {
-                if (temp._name == null) return false;
-                else if (!(this._name.equals(temp._name))) 
-                    return false;
-            }
-            else if (temp._name != null)
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        ActionEvent other = (ActionEvent) obj;
+        if (_addAllParms == null) {
+            if (other._addAllParms != null)
                 return false;
-            if (this._forEachResult != temp._forEachResult)
+        } else if (!_addAllParms.equals(other._addAllParms))
+            return false;
+        if (_assignmentList == null) {
+            if (other._assignmentList != null)
                 return false;
-            if (this._has_forEachResult != temp._has_forEachResult)
+        } else if (!_assignmentList.equals(other._assignmentList))
+            return false;
+        if (_forEachResult == null) {
+            if (other._forEachResult != null)
                 return false;
-            if (this._addAllParms != temp._addAllParms)
+        } else if (!_forEachResult.equals(other._forEachResult))
+            return false;
+        if (_name == null) {
+            if (other._name != null)
                 return false;
-            if (this._has_addAllParms != temp._has_addAllParms)
-                return false;
-            if (this._assignmentList != null) {
-                if (temp._assignmentList == null) return false;
-                else if (!(this._assignmentList.equals(temp._assignmentList))) 
-                    return false;
-            }
-            else if (temp._assignmentList != null)
-                return false;
-            return true;
-        }
-        return false;
+        } else if (!_name.equals(other._name))
+            return false;
+        return true;
     }
 
     /**
@@ -172,56 +188,58 @@ import org.exolab.castor.xml.Unmarshaller;
      * 
      * @return the value of field 'AddAllParms'.
      */
-    public boolean getAddAllParms(
-    ) {
-        return this._addAllParms;
+    public boolean getAddAllParms() {
+        return _addAllParms == null ? DEFAULT_ADD_ALL_PARMS_FLAG
+                                   : _addAllParms;
     }
 
     /**
      * Method getAssignment.
      * 
      * @param index
-     * @throws java.lang.IndexOutOfBoundsException if the index
-     * given is outside the bounds of the collection
-     * @return the value of the
-     * org.opennms.netmgt.config.vacuumd.Assignment at the given
-     * index
+     * @throws IndexOutOfBoundsException
+     *             if the index given is outside the bounds of the collection
+     * @return the value of the Assignment at the given index
      */
-    public org.opennms.netmgt.config.vacuumd.Assignment getAssignment(
-            final int index)
-    throws java.lang.IndexOutOfBoundsException {
+    public Assignment getAssignment(final int index)
+            throws IndexOutOfBoundsException {
         // check bounds for index
         if (index < 0 || index >= this._assignmentList.size()) {
-            throw new IndexOutOfBoundsException("getAssignment: Index value '" + index + "' not in range [0.." + (this._assignmentList.size() - 1) + "]");
+            throw new IndexOutOfBoundsException(
+                                                "getAssignment: Index value '"
+                                                        + index
+                                                        + "' not in range [0.."
+                                                        + (this._assignmentList.size() - 1)
+                                                        + "]");
         }
-        
-        return (org.opennms.netmgt.config.vacuumd.Assignment) _assignmentList.get(index);
+
+        return (Assignment) _assignmentList.get(index);
     }
 
     /**
-     * Method getAssignment.Returns the contents of the collection
-     * in an Array.  <p>Note:  Just in case the collection contents
-     * are changing in another thread, we pass a 0-length Array of
-     * the correct type into the API call.  This way we <i>know</i>
-     * that the Array returned is of exactly the correct length.
+     * Method getAssignment.Returns the contents of the collection in an
+     * Array.
+     * <p>
+     * Note: Just in case the collection contents are changing in another
+     * thread, we pass a 0-length Array of the correct type into the API call.
+     * This way we <i>know</i> that the Array returned is of exactly the
+     * correct length.
      * 
      * @return this collection as an Array
      */
-    public org.opennms.netmgt.config.vacuumd.Assignment[] getAssignment(
-    ) {
-        org.opennms.netmgt.config.vacuumd.Assignment[] array = new org.opennms.netmgt.config.vacuumd.Assignment[0];
-        return (org.opennms.netmgt.config.vacuumd.Assignment[]) this._assignmentList.toArray(array);
+    public Assignment[] getAssignment() {
+        Assignment[] array = new Assignment[0];
+        return (Assignment[]) this._assignmentList.toArray(array);
     }
 
     /**
      * Method getAssignmentCollection.Returns a reference to
-     * '_assignmentList'. No type checking is performed on any
-     * modifications to the Vector.
+     * '_assignmentList'. No type checking is performed on any modifications
+     * to the Vector.
      * 
      * @return a reference to the Vector backing this class
      */
-    public java.util.List<org.opennms.netmgt.config.vacuumd.Assignment> getAssignmentCollection(
-    ) {
+    public List<Assignment> getAssignmentCollection() {
         return this._assignmentList;
     }
 
@@ -230,8 +248,7 @@ import org.exolab.castor.xml.Unmarshaller;
      * 
      * @return the size of this collection
      */
-    public int getAssignmentCount(
-    ) {
+    public int getAssignmentCount() {
         return this._assignmentList.size();
     }
 
@@ -240,9 +257,9 @@ import org.exolab.castor.xml.Unmarshaller;
      * 
      * @return the value of field 'ForEachResult'.
      */
-    public boolean getForEachResult(
-    ) {
-        return this._forEachResult;
+    public boolean getForEachResult() {
+        return _forEachResult == null ? DEFAULT_FOR_EACH_RESULT_FLAG
+                                     : _forEachResult;
     }
 
     /**
@@ -250,53 +267,30 @@ import org.exolab.castor.xml.Unmarshaller;
      * 
      * @return the value of field 'Name'.
      */
-    public java.lang.String getName(
-    ) {
+    public String getName() {
         return this._name;
     }
 
     /**
-     * Method hasAddAllParms.
-     * 
-     * @return true if at least one AddAllParms has been added
-     */
-    public boolean hasAddAllParms(
-    ) {
-        return this._has_addAllParms;
-    }
-
-    /**
-     * Method hasForEachResult.
-     * 
-     * @return true if at least one ForEachResult has been added
-     */
-    public boolean hasForEachResult(
-    ) {
-        return this._has_forEachResult;
-    }
-
-    /**
-     * Overrides the java.lang.Object.hashCode method.
+     * Overrides the Object.hashCode method.
      * <p>
-     * The following steps came from <b>Effective Java Programming
-     * Language Guide</b> by Joshua Bloch, Chapter 3
+     * The following steps came from <b>Effective Java Programming Language
+     * Guide</b> by Joshua Bloch, Chapter 3
      * 
      * @return a hash code value for the object.
      */
-    public int hashCode(
-    ) {
-        int result = 17;
-        
-        long tmp;
-        if (_name != null) {
-           result = 37 * result + _name.hashCode();
-        }
-        result = 37 * result + (_forEachResult?0:1);
-        result = 37 * result + (_addAllParms?0:1);
-        if (_assignmentList != null) {
-           result = 37 * result + _assignmentList.hashCode();
-        }
-        
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result
+                + ((_addAllParms == null) ? 0 : _addAllParms.hashCode());
+        result = prime
+                * result
+                + ((_assignmentList == null) ? 0 : _assignmentList.hashCode());
+        result = prime * result
+                + ((_forEachResult == null) ? 0 : _forEachResult.hashCode());
+        result = prime * result + ((_name == null) ? 0 : _name.hashCode());
         return result;
     }
 
@@ -305,9 +299,9 @@ import org.exolab.castor.xml.Unmarshaller;
      * 
      * @return the value of field 'AddAllParms'.
      */
-    public boolean isAddAllParms(
-    ) {
-        return this._addAllParms;
+    public boolean isAddAllParms() {
+        return _addAllParms == null ? DEFAULT_ADD_ALL_PARMS_FLAG
+                                   : _addAllParms;
     }
 
     /**
@@ -315,73 +309,23 @@ import org.exolab.castor.xml.Unmarshaller;
      * 
      * @return the value of field 'ForEachResult'.
      */
-    public boolean isForEachResult(
-    ) {
-        return this._forEachResult;
-    }
-
-    /**
-     * Method isValid.
-     * 
-     * @return true if this object is valid according to the schema
-     */
-    public boolean isValid(
-    ) {
-        try {
-            validate();
-        } catch (org.exolab.castor.xml.ValidationException vex) {
-            return false;
-        }
-        return true;
+    public boolean isForEachResult() {
+        return _forEachResult == null ? DEFAULT_FOR_EACH_RESULT_FLAG
+                                     : _forEachResult;
     }
 
     /**
      * Method iterateAssignment.
      * 
-     * @return an Iterator over all possible elements in this
-     * collection
+     * @return an Iterator over all possible elements in this collection
      */
-    public java.util.Iterator<org.opennms.netmgt.config.vacuumd.Assignment> iterateAssignment(
-    ) {
+    public Iterator<Assignment> iterateAssignment() {
         return this._assignmentList.iterator();
     }
 
     /**
-     * 
-     * 
-     * @param out
-     * @throws org.exolab.castor.xml.MarshalException if object is
-     * null or if any SAXException is thrown during marshaling
-     * @throws org.exolab.castor.xml.ValidationException if this
-     * object is an invalid instance according to the schema
      */
-    public void marshal(
-            final java.io.Writer out)
-    throws org.exolab.castor.xml.MarshalException, org.exolab.castor.xml.ValidationException {
-        Marshaller.marshal(this, out);
-    }
-
-    /**
-     * 
-     * 
-     * @param handler
-     * @throws java.io.IOException if an IOException occurs during
-     * marshaling
-     * @throws org.exolab.castor.xml.ValidationException if this
-     * object is an invalid instance according to the schema
-     * @throws org.exolab.castor.xml.MarshalException if object is
-     * null or if any SAXException is thrown during marshaling
-     */
-    public void marshal(
-            final org.xml.sax.ContentHandler handler)
-    throws java.io.IOException, org.exolab.castor.xml.MarshalException, org.exolab.castor.xml.ValidationException {
-        Marshaller.marshal(this, handler);
-    }
-
-    /**
-     */
-    public void removeAllAssignment(
-    ) {
+    public void removeAllAssignment() {
         this._assignmentList.clear();
     }
 
@@ -391,8 +335,7 @@ import org.exolab.castor.xml.Unmarshaller;
      * @param vAssignment
      * @return true if the object was removed from the collection.
      */
-    public boolean removeAssignment(
-            final org.opennms.netmgt.config.vacuumd.Assignment vAssignment) {
+    public boolean removeAssignment(final Assignment vAssignment) {
         boolean removed = _assignmentList.remove(vAssignment);
         return removed;
     }
@@ -403,21 +346,19 @@ import org.exolab.castor.xml.Unmarshaller;
      * @param index
      * @return the element removed from the collection
      */
-    public org.opennms.netmgt.config.vacuumd.Assignment removeAssignmentAt(
-            final int index) {
-        java.lang.Object obj = this._assignmentList.remove(index);
-        return (org.opennms.netmgt.config.vacuumd.Assignment) obj;
+    public Assignment removeAssignmentAt(final int index) {
+        Object obj = this._assignmentList.remove(index);
+        return (Assignment) obj;
     }
 
     /**
      * Sets the value of field 'addAllParms'.
      * 
-     * @param addAllParms the value of field 'addAllParms'.
+     * @param addAllParms
+     *            the value of field 'addAllParms'.
      */
-    public void setAddAllParms(
-            final boolean addAllParms) {
+    public void setAddAllParms(final boolean addAllParms) {
         this._addAllParms = addAllParms;
-        this._has_addAllParms = true;
     }
 
     /**
@@ -425,18 +366,21 @@ import org.exolab.castor.xml.Unmarshaller;
      * 
      * @param index
      * @param vAssignment
-     * @throws java.lang.IndexOutOfBoundsException if the index
-     * given is outside the bounds of the collection
+     * @throws IndexOutOfBoundsException
+     *             if the index given is outside the bounds of the collection
      */
-    public void setAssignment(
-            final int index,
-            final org.opennms.netmgt.config.vacuumd.Assignment vAssignment)
-    throws java.lang.IndexOutOfBoundsException {
+    public void setAssignment(final int index, final Assignment vAssignment)
+            throws IndexOutOfBoundsException {
         // check bounds for index
         if (index < 0 || index >= this._assignmentList.size()) {
-            throw new IndexOutOfBoundsException("setAssignment: Index value '" + index + "' not in range [0.." + (this._assignmentList.size() - 1) + "]");
+            throw new IndexOutOfBoundsException(
+                                                "setAssignment: Index value '"
+                                                        + index
+                                                        + "' not in range [0.."
+                                                        + (this._assignmentList.size() - 1)
+                                                        + "]");
         }
-        
+
         this._assignmentList.set(index, vAssignment);
     }
 
@@ -445,91 +389,46 @@ import org.exolab.castor.xml.Unmarshaller;
      * 
      * @param vAssignmentArray
      */
-    public void setAssignment(
-            final org.opennms.netmgt.config.vacuumd.Assignment[] vAssignmentArray) {
-        //-- copy array
+    public void setAssignment(final Assignment[] vAssignmentArray) {
+        // -- copy array
         _assignmentList.clear();
-        
+
         for (int i = 0; i < vAssignmentArray.length; i++) {
-                this._assignmentList.add(vAssignmentArray[i]);
+            this._assignmentList.add(vAssignmentArray[i]);
         }
     }
 
     /**
-     * Sets the value of '_assignmentList' by copying the given
-     * Vector. All elements will be checked for type safety.
+     * Sets the value of '_assignmentList' by copying the given Vector. All
+     * elements will be checked for type safety.
      * 
-     * @param vAssignmentList the Vector to copy.
+     * @param vAssignmentList
+     *            the Vector to copy.
      */
-    public void setAssignment(
-            final java.util.List<org.opennms.netmgt.config.vacuumd.Assignment> vAssignmentList) {
+    public void setAssignment(final List<Assignment> vAssignmentList) {
         // copy vector
         this._assignmentList.clear();
-        
-        this._assignmentList.addAll(vAssignmentList);
-    }
 
-    /**
-     * Sets the value of '_assignmentList' by setting it to the
-     * given Vector. No type checking is performed.
-     * @deprecated
-     * 
-     * @param assignmentList the Vector to set.
-     */
-    public void setAssignmentCollection(
-            final java.util.List<org.opennms.netmgt.config.vacuumd.Assignment> assignmentList) {
-        this._assignmentList = assignmentList;
+        this._assignmentList.addAll(vAssignmentList);
     }
 
     /**
      * Sets the value of field 'forEachResult'.
      * 
-     * @param forEachResult the value of field 'forEachResult'.
+     * @param forEachResult
+     *            the value of field 'forEachResult'.
      */
-    public void setForEachResult(
-            final boolean forEachResult) {
+    public void setForEachResult(final boolean forEachResult) {
         this._forEachResult = forEachResult;
-        this._has_forEachResult = true;
     }
 
     /**
      * Sets the value of field 'name'.
      * 
-     * @param name the value of field 'name'.
+     * @param name
+     *            the value of field 'name'.
      */
-    public void setName(
-            final java.lang.String name) {
+    public void setName(final String name) {
         this._name = name;
     }
-
-    /**
-     * Method unmarshal.
-     * 
-     * @param reader
-     * @throws org.exolab.castor.xml.MarshalException if object is
-     * null or if any SAXException is thrown during marshaling
-     * @throws org.exolab.castor.xml.ValidationException if this
-     * object is an invalid instance according to the schema
-     * @return the unmarshaled
-     * org.opennms.netmgt.config.vacuumd.ActionEvent
-     */
-    public static org.opennms.netmgt.config.vacuumd.ActionEvent unmarshal(
-            final java.io.Reader reader)
-    throws org.exolab.castor.xml.MarshalException, org.exolab.castor.xml.ValidationException {
-        return (org.opennms.netmgt.config.vacuumd.ActionEvent) Unmarshaller.unmarshal(org.opennms.netmgt.config.vacuumd.ActionEvent.class, reader);
-    }
-
-    /**
-     * 
-     * 
-     * @throws org.exolab.castor.xml.ValidationException if this
-     * object is an invalid instance according to the schema
-     */
-    public void validate(
-    )
-    throws org.exolab.castor.xml.ValidationException {
-        org.exolab.castor.xml.Validator validator = new org.exolab.castor.xml.Validator();
-        validator.validate(this);
-    }
-
 }

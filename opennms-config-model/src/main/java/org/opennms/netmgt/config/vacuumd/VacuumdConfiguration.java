@@ -78,31 +78,31 @@ public class VacuumdConfiguration implements Serializable {
      * Field _automations.
      */
     @XmlElement(name = "automations")
-    private Automations _automations;
+    private Automations _automations = new Automations();
 
     /**
      * A collection of triggers
      */
     @XmlElement(name = "triggers")
-    private Triggers _triggers;
+    private Triggers _triggers = new Triggers();
 
     /**
      * A collection of actions
      */
     @XmlElement(name = "actions")
-    private Actions _actions;
+    private Actions _actions = new Actions();
 
     /**
      * Field _autoEvents.
      */
     @XmlElement(name = "auto-events")
-    private AutoEvents _autoEvents;
+    private AutoEvents _autoEvents = new AutoEvents();;
 
     /**
      * Field _actionEvents.
      */
     @XmlElement(name = "action-events")
-    private ActionEvents _actionEvents;
+    private ActionEvents _actionEvents = new ActionEvents();
 
     // ----------------/
     // - Constructors -/
@@ -110,12 +110,6 @@ public class VacuumdConfiguration implements Serializable {
 
     public VacuumdConfiguration() {
         super();
-    }
-
-    public VacuumdConfiguration(final int period, final Automations automations) {
-        super();
-        setPeriod(period);
-        setAutomations(automations);
     }
 
     public VacuumdConfiguration(final int period,

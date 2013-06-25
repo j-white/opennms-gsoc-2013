@@ -45,7 +45,6 @@ import javax.xml.bind.annotation.XmlRootElement;
  * 
  * @version $Revision$ $Date$
  */
-
 @XmlRootElement(name = "assignment")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class Assignment implements java.io.Serializable {

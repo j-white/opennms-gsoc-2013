@@ -109,14 +109,6 @@ public class Automation implements Serializable {
     }
 
     public Automation(final String name, final int interval,
-            final String actionName) {
-        super();
-        setName(name);
-        setInterval(interval);
-        setActionName(actionName);
-    }
-
-    public Automation(final String name, final int interval,
             final String triggerName, final String actionName,
             final String autoEventName, final String actionEvent,
             final boolean active) {

@@ -36,6 +36,7 @@ import java.io.Serializable;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 //---------------------------------/
@@ -88,7 +89,7 @@ public class Trigger implements Serializable {
     /**
      * Just a generic string used for SQL statements
      */
-    @XmlAttribute(name = "statement")
+    @XmlElement(name = "statement")
     private Statement _statement;
 
     // ----------------/

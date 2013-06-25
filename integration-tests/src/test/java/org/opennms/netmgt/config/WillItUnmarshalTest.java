@@ -394,7 +394,7 @@ public class WillItUnmarshalTest {
     }
     @Test
     public void testExampleEventProxyVacuumdConfiguration() throws Exception {
-        unmarshalExample("event-proxy/vacuumd-configuration.xml", VacuumdConfiguration.class);
+        unmarshalJaxbExample("event-proxy/vacuumd-configuration.xml", VacuumdConfiguration.class);
     }
     @Test
     public void testSiteStatusViews() throws Exception {
@@ -462,7 +462,7 @@ public class WillItUnmarshalTest {
     }
     @Test
     public void testVacuumdConfiguration() throws Exception {
-        unmarshal("vacuumd-configuration.xml", VacuumdConfiguration.class);
+        unmarshalJaxb("vacuumd-configuration.xml", VacuumdConfiguration.class);
     }
     @Test
     public void testXmlrpcdConfiguration() throws Exception {

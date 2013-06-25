@@ -68,7 +68,7 @@ public class Statement implements Serializable {
     /**
      * Field _transactional.
      */
-    @XmlAttribute(name = "transaction")
+    @XmlAttribute(name = "transactional")
     private Boolean _transactional;
 
     // ----------------/
