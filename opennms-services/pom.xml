@@ -406,5 +406,14 @@
       <version>1.3.5</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.opennms.core</groupId>
+      <artifactId>org.opennms.core.grid</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.opennms.core.test-api</groupId>
+      <artifactId>org.opennms.core.test-api.grid</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>

@@ -15,6 +15,5 @@
   </description>
   <modules>
     <module>clusterd</module>
-    <module>utils</module>
   </modules>
 </project>
