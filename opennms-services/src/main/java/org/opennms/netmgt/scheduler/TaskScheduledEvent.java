@@ -1,4 +1,4 @@
-package org.opennms.features.clustering.utils;
+package org.opennms.netmgt.scheduler;
 
 import java.io.Serializable;
 

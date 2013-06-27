@@ -28,9 +28,9 @@
 
 package org.opennms.netmgt.scheduler;
 
-import java.io.Serializable;
+import org.opennms.core.grid.DataGridProvider;
 
-public class ScheduleTimeKeeper implements ReadyRunnable, SchedulerAware, Timer, Serializable {
+public class ScheduleTimeKeeper implements ClusterRunnable, Timer, DataGridProviderAware {
     private static final long serialVersionUID = 1073282881016278947L;
     private final long m_timeToRun;
     private final ReadyRunnable m_runnable;
@@ -65,6 +65,13 @@ public class ScheduleTimeKeeper implements ReadyRunnable, SchedulerAware, Timer,
     public void setScheduler(Scheduler scheduler) {
         if (m_runnable instanceof SchedulerAware) {
             ((SchedulerAware) m_runnable).setScheduler(scheduler);
+        }
+    }
+
+    @Override
+    public void setDataGridProvider(DataGridProvider dataGridProvider) {
+        if (m_runnable instanceof DataGridProviderAware) {
+            ((DataGridProviderAware) m_runnable).setDataGridProvider(dataGridProvider);
         }
     }
 }

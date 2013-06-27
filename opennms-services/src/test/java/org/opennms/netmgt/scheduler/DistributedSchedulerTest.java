@@ -26,7 +26,7 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.features.clustering.utils;
+package org.opennms.netmgt.scheduler;
 
 import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.*;
@@ -49,6 +49,10 @@ import org.opennms.core.grid.DataGridProviderFactory;
 import org.opennms.core.test.MockLogAppender;
 import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
 import org.opennms.core.test.grid.annotations.JUnitGrid;
+import org.opennms.netmgt.scheduler.ClusterRunnable;
+import org.opennms.netmgt.scheduler.DataGridProviderAware;
+import org.opennms.netmgt.scheduler.DistributedScheduler;
+import org.opennms.netmgt.scheduler.Scheduler;
 import org.springframework.test.context.ContextConfiguration;
 
 /**
@@ -71,7 +75,7 @@ public class DistributedSchedulerTest {
 
     @Before
     public void setUp() {
-        MockLogAppender.setupLogging(true, "WARN");
+        MockLogAppender.setupLogging(true, "DEBUG");
 
         // Remove any existing values from the map
         MySingletonMap.getInstance().clearMap();
@@ -210,7 +214,7 @@ public class DistributedSchedulerTest {
         distributedSchedulers[y].start();
 
         // Verify that the task gets executed
-        await().atMost(DEFAULT_SCHEDULE_INTERVAL_MS * 2, MILLISECONDS).until(getValueFor(DEFAULT_TASK_KEY),
+        await().atMost(DEFAULT_SCHEDULE_INTERVAL_MS * 2000, MILLISECONDS).until(getValueFor(DEFAULT_TASK_KEY),
                                                                              is(1));
 
         // Stop scheduler Y and block until it's fully stopped
@@ -250,13 +254,13 @@ public class DistributedSchedulerTest {
     /**
      * Adds a unique key the a global hash set when run.
      */
-    public static class MyRunnable implements ClusterRunnable {
+    public static class MyRunnable implements ClusterRunnable, DataGridProviderAware {
         private static final long serialVersionUID = 2352596012788985548L;
         private int m_key;
         private int m_numReschedules;
         private long m_interval;
         private transient DataGridProvider m_dataGridProvider;
-        private transient DistributedScheduler m_distributedScheduler;
+        private transient Scheduler m_scheduler;
 
         public MyRunnable(int key) {
             this(key, 0, 0);
@@ -278,7 +282,7 @@ public class DistributedSchedulerTest {
             MySingletonMap.getInstance().incValueAt(m_dataGridProvider.getName());
 
             if (m_numReschedules > 0) {
-                m_distributedScheduler.schedule(m_interval, this);
+                m_scheduler.schedule(m_interval, this);
                 m_numReschedules--;
             }
         }
@@ -289,14 +293,14 @@ public class DistributedSchedulerTest {
         }
 
         @Override
-        public void setDataGridProvider(DataGridProvider dataGridProvider) {
-            m_dataGridProvider = dataGridProvider;
+        public void setScheduler(
+                Scheduler scheduler) {
+            m_scheduler = scheduler;
         }
 
         @Override
-        public void setDistributedScheduler(
-                DistributedScheduler distributedScheduler) {
-            m_distributedScheduler = distributedScheduler;
+        public void setDataGridProvider(DataGridProvider dataGridProvider) {
+            m_dataGridProvider = dataGridProvider;
         }
     }
 

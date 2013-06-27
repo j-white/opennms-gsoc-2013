@@ -33,36 +33,36 @@ import java.sql.SQLException;
 import java.util.Date;
 
 import org.opennms.core.utils.ThreadCategory;
-import org.opennms.netmgt.config.VacuumdConfigFactory;
+import org.opennms.netmgt.config.VacuumdConfigDao;
 import org.opennms.netmgt.config.vacuumd.ActionEvent;
 import org.opennms.netmgt.config.vacuumd.Automation;
-import org.opennms.netmgt.scheduler.ReadyRunnable;
-import org.opennms.netmgt.scheduler.Schedule;
+import org.opennms.netmgt.scheduler.ClusterRunnable;
+import org.opennms.netmgt.scheduler.Scheduler;
 
 /**
  * This class used to process automations configured in the
  * vacuumd-configuration.xml file. Automations are identified by a name and
- * they reference Triggers and Actions by name, as well. Autmations also have
+ * they reference Triggers and Actions by name, as well. Automations also have
  * an interval attribute that determines how often they run.
  * 
  * @author <a href="mailto:david@opennms.org">David Hustace</a>
  * @version $Id: $
  */
-public class AutomationProcessor implements ReadyRunnable {
+public class AutomationProcessor implements ClusterRunnable {
+    private static final long serialVersionUID = 123428394280420384L;
 
     private final Automation m_automation;
-    private final TriggerProcessor m_trigger;
-    private final ActionProcessor m_action;
+    private transient TriggerProcessor m_trigger;
+    private transient ActionProcessor m_action;
 
     /**
      * @deprecated Associate {@link Automation} objects with
      *             {@link ActionEvent} instances instead.
      */
-    private final AutoEventProcessor m_autoEvent;
-    private final ActionEventProcessor m_actionEvent;
+    private transient AutoEventProcessor m_autoEvent;
+    private transient ActionEventProcessor m_actionEvent;
 
-    private volatile Schedule m_schedule;
-    private volatile boolean m_ready = false;
+    private transient Scheduler m_scheduler;
 
     /**
      * Public constructor.
@@ -71,22 +71,26 @@ public class AutomationProcessor implements ReadyRunnable {
      *            a {@link org.opennms.netmgt.config.vacuumd.Automation}
      *            object.
      */
-    @SuppressWarnings("deprecation")
     public AutomationProcessor(Automation automation) {
-        m_ready = true;
         m_automation = automation;
+        init();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void init() {
+        VacuumdConfigDao vacuumdConfigDao = Vacuumd.getSingleton().getVacuumdConfig();
         m_trigger = new TriggerProcessor(
                                          m_automation.getName(),
-                                         VacuumdConfigFactory.getInstance().getTrigger(m_automation.getTriggerName()));
+                                         vacuumdConfigDao.getTrigger(m_automation.getTriggerName()));
         m_action = new ActionProcessor(
                                        m_automation.getName(),
-                                       VacuumdConfigFactory.getInstance().getAction(m_automation.getActionName()));
+                                       vacuumdConfigDao.getAction(m_automation.getActionName()));
         m_autoEvent = new AutoEventProcessor(
                                              m_automation.getName(),
-                                             VacuumdConfigFactory.getInstance().getAutoEvent(m_automation.getAutoEventName()));
+                                             vacuumdConfigDao.getAutoEvent(m_automation.getAutoEventName()));
         m_actionEvent = new ActionEventProcessor(
                                                  m_automation.getName(),
-                                                 VacuumdConfigFactory.getInstance().getActionEvent(m_automation.getActionEvent()));
+                                                 vacuumdConfigDao.getActionEvent(m_automation.getActionEvent()));
     }
 
     /**
@@ -127,26 +131,22 @@ public class AutomationProcessor implements ReadyRunnable {
      */
     @Override
     public void run() {
-
         Date startDate = new Date();
         log().debug("Start Scheduled automation " + this);
 
         if (getAutomation() != null) {
-            setReady(false);
             try {
                 runAutomation();
             } catch (SQLException e) {
                 log().warn("Error running automation: "
                                    + getAutomation().getName() + ", "
                                    + e.getMessage());
-            } finally {
-                setReady(true);
             }
         }
 
         log().debug("run: Finished automation " + m_automation.getName()
                             + ", started at " + startDate);
-
+        schedule();
     }
 
     /**
@@ -205,6 +205,7 @@ public class AutomationProcessor implements ReadyRunnable {
 
     }
 
+    @SuppressWarnings("deprecation")
     private boolean processAction(TriggerResults triggerResults)
             throws SQLException {
         log().debug("runAutomation: running action(s)/actionEvent(s) for : "
@@ -295,7 +296,7 @@ public class AutomationProcessor implements ReadyRunnable {
      *             if any.
      * @return a int.
      */
-    public int countRows(ResultSet rs) throws SQLException {
+    private static int countRows(ResultSet rs) throws SQLException {
         if (rs == null) {
             return 0;
         }
@@ -305,18 +306,6 @@ public class AutomationProcessor implements ReadyRunnable {
             rows++;
         rs.beforeFirst();
         return rows;
-    }
-
-    /**
-     * Simple helper method to determine if the targetString contains any
-     * '${token}'s.
-     * 
-     * @param targetString
-     *            a {@link java.lang.String} object.
-     * @return a boolean.
-     */
-    public boolean containsTokens(String targetString) {
-        return m_action.getTokenCount(targetString) > 0;
     }
 
     /**
@@ -339,30 +328,7 @@ public class AutomationProcessor implements ReadyRunnable {
      */
     @Override
     public boolean isReady() {
-        return m_ready;
-    }
-
-    /**
-     * <p>
-     * getSchedule
-     * </p>
-     * 
-     * @return Returns the schedule.
-     */
-    public Schedule getSchedule() {
-        return m_schedule;
-    }
-
-    /**
-     * <p>
-     * setSchedule
-     * </p>
-     * 
-     * @param schedule
-     *            The schedule to set.
-     */
-    public void setSchedule(Schedule schedule) {
-        m_schedule = schedule;
+        return true;
     }
 
     private ThreadCategory log() {
@@ -373,16 +339,22 @@ public class AutomationProcessor implements ReadyRunnable {
         return m_trigger.hasTrigger();
     }
 
-    /**
-     * <p>
-     * setReady
-     * </p>
-     * 
-     * @param ready
-     *            a boolean.
-     */
-    public void setReady(boolean ready) {
-        m_ready = ready;
+    private void schedule() {
+        scheduleWith(m_scheduler);
     }
 
+    public void scheduleWith(Scheduler scheduler) {
+        scheduler.schedule(m_automation.getInterval(), this);
+    }
+
+    public void setScheduler(Scheduler scheduler) {
+        m_scheduler = scheduler;
+    }
+
+    private void readObject(java.io.ObjectInputStream stream)
+            throws java.io.IOException, ClassNotFoundException
+    {
+        stream.defaultReadObject();
+        init();
+    }
 }

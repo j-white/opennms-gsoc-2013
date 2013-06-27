@@ -26,7 +26,7 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.features.clustering.utils;
+package org.opennms.netmgt.scheduler;
 
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Map;
@@ -58,13 +58,12 @@ import org.springframework.util.Assert;
  * @author <a href="http://www.opennms.org/">OpenNMS </a>
  */
 public class DistributedScheduler implements Runnable, PausableFiber,
-        ClusterScheduler, MessageListener<TaskScheduledEvent>  {
+        Scheduler, MessageListener<TaskScheduledEvent> {
     /**
-     * The map of queue that contain {@link ClusterRunnable cluster runnable}
-     * instances. The queues are mapped according to the interval of
-     * scheduling.
+     * The map of queues that contain ReadyRunnable instances. The queues are
+     * mapped according to the interval of scheduling.
      */
-    private Map<Long, PeekableFifoQueue<ClusterRunnable>> m_queues;
+    private Map<Long, PeekableFifoQueue<ReadyRunnable>> m_queues;
 
     /**
      * The pool of threads that are used to executed the runnable instances
@@ -86,7 +85,7 @@ public class DistributedScheduler implements Runnable, PausableFiber,
      * Data grid provider.
      */
     private DataGridProvider m_dataGridProvider;
-    
+
     /**
      * Distributed lock.
      */
@@ -107,7 +106,7 @@ public class DistributedScheduler implements Runnable, PausableFiber,
     public DataGridProvider getDataGridProvider() {
         return m_dataGridProvider;
     }
-    
+
     /**
      * This queue extends the standard FIFO queue instance so that it is
      * possible to peek at an instance without removing it from the queue.
@@ -171,7 +170,7 @@ public class DistributedScheduler implements Runnable, PausableFiber,
      * @throws java.lang.RuntimeException
      *             Thrown if an error occurs adding the element to the queue.
      */
-    private void schedule(ClusterRunnable runnable, long interval) {
+    private void schedule(ReadyRunnable runnable, long interval) {
         if (log().isDebugEnabled()) {
             log().debug("schedule: Adding ready runnable " + runnable
                                 + " at interval " + interval);
@@ -180,14 +179,14 @@ public class DistributedScheduler implements Runnable, PausableFiber,
         m_lock.lock();
         try {
             Long key = Long.valueOf(interval);
-            PeekableFifoQueue<ClusterRunnable> queue = m_queues.get(key);
+            PeekableFifoQueue<ReadyRunnable> queue = m_queues.get(key);
             if (queue == null) {
                 if (log().isDebugEnabled()) {
                     log().debug("schedule: interval queue did not exist, a new one has been created");
                 }
-                queue = new PeekableFifoQueue<ClusterRunnable>();
+                queue = new PeekableFifoQueue<ReadyRunnable>();
             }
-    
+
             try {
                 queue.add(runnable);
                 m_queues.put(key, queue);
@@ -198,17 +197,16 @@ public class DistributedScheduler implements Runnable, PausableFiber,
                                    + runnable + " to scheduler: " + e, e);
                 Thread.currentThread().interrupt();
             }
-        } finally {  
-            m_lock.unlock();  
+        } finally {
+            m_lock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
-    public void schedule(long interval,
-            final ClusterRunnable runnable) {
+    public void schedule(final long interval, ReadyRunnable runnable) {
         final long timeToRun = getCurrentTime() + interval;
-        schedule(new ClusterRunnableTimeKeeper(runnable, timeToRun), interval);
+        schedule(new ScheduleTimeKeeper(runnable, timeToRun), interval);
     }
 
     /**
@@ -326,7 +324,7 @@ public class DistributedScheduler implements Runnable, PausableFiber,
      */
     public int getScheduled() {
         int numElementsScheduled = 0;
-        for (PeekableFifoQueue<ClusterRunnable> queue : m_queues.values()) {
+        for (PeekableFifoQueue<ReadyRunnable> queue : m_queues.values()) {
             numElementsScheduled += queue.size();
         }
         return numElementsScheduled;
@@ -422,49 +420,57 @@ public class DistributedScheduler implements Runnable, PausableFiber,
              */
             int runned = 0;
 
-            // Limit this section to a single distributed scheduler instance at any time
+            // Limit this section to a single distributed scheduler instance
+            // at any time
             m_lock.lock();
             try {
                 /*
                  * Get an iterator so that we can cycle through the queue
                  * elements.
                  */
-                for (Entry<Long, PeekableFifoQueue<ClusterRunnable>> entry : m_queues.entrySet()) {
+                for (Entry<Long, PeekableFifoQueue<ReadyRunnable>> entry : m_queues.entrySet()) {
                     /*
                      * Peak for Runnable objects until there are no more ready
                      * runnables.
                      * 
-                     * Also, only go through each queue once! if we didn't add a
-                     * count then it would be possible to starve other queues.
+                     * Also, only go through each queue once! if we didn't add
+                     * a count then it would be possible to starve other
+                     * queues.
                      */
-                    PeekableFifoQueue<ClusterRunnable> in = entry.getValue();
-                    ClusterRunnable clusterRun = null;
+                    PeekableFifoQueue<ReadyRunnable> in = entry.getValue();
+                    ReadyRunnable readyRun = null;
                     int maxLoops = in.size();
                     do {
                         try {
-                            clusterRun = in.peek();
-                            if (clusterRun != null) {
-                                if (clusterRun.isReady()) {
+                            readyRun = in.peek();
+                            if (readyRun != null) {
+                                if (readyRun.isReady()) {
                                     if (log().isDebugEnabled()) {
-                                        log().debug("run: found cluster runnable "
-                                                            + clusterRun);
+                                        log().debug("run: found ready runnable "
+                                                            + readyRun);
                                     }
 
                                     /*
-                                     * Pop the interface/readyRunnable from the
-                                     * queue for execution.
+                                     * Pop the interface/readyRunnable from
+                                     * the queue for execution.
                                      */
                                     in.remove();
-                                    
-                                    // Push the updated queue back into the map
+
+                                    // Push the updated queue back into the
+                                    // map
                                     m_queues.put(entry.getKey(), in);
 
-                                    // Set the schedule and grid provider
-                                    clusterRun.setDistributedScheduler(this);
-                                    clusterRun.setDataGridProvider(m_dataGridProvider);
+                                    // Set the scheduler instance
+                                    if (readyRun instanceof SchedulerAware) {
+                                        ((SchedulerAware) readyRun).setScheduler(this);
+                                    }
 
+                                    // Set the data grid instance
+                                    if (readyRun instanceof DataGridProviderAware) {
+                                        ((DataGridProviderAware) readyRun).setDataGridProvider(m_dataGridProvider);
+                                    }
                                     // Add runnable to the execution queue
-                                    m_runner.execute(clusterRun);
+                                    m_runner.execute(readyRun);
                                     ++runned;
                                 }
                             }
@@ -474,11 +480,11 @@ public class DistributedScheduler implements Runnable, PausableFiber,
                             throw new UndeclaredThrowableException(e);
                         }
 
-                    } while (clusterRun != null && clusterRun.isReady()
+                    } while (readyRun != null && readyRun.isReady()
                             && --maxLoops > 0);
                 }
-            } finally {  
-              m_lock.unlock();  
+            } finally {
+                m_lock.unlock();
             }
 
             /*

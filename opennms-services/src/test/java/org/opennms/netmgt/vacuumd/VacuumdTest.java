@@ -30,26 +30,36 @@ package org.opennms.netmgt.vacuumd;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.concurrent.Callable;
 
 import javax.sql.DataSource;
 
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.opennms.core.db.DataSourceFactory;
 import org.opennms.netmgt.config.VacuumdConfigFactory;
 import org.opennms.netmgt.config.vacuumd.Action;
 import org.opennms.netmgt.config.vacuumd.Actions;
+import org.opennms.netmgt.config.vacuumd.AutoEvent;
+import org.opennms.netmgt.config.vacuumd.AutoEvents;
 import org.opennms.netmgt.config.vacuumd.Automation;
 import org.opennms.netmgt.config.vacuumd.Automations;
 import org.opennms.netmgt.config.vacuumd.Statement;
+import org.opennms.netmgt.config.vacuumd.Trigger;
+import org.opennms.netmgt.config.vacuumd.Triggers;
+import org.opennms.netmgt.config.vacuumd.Uei;
 import org.opennms.netmgt.config.vacuumd.VacuumdConfiguration;
+import org.opennms.netmgt.eventd.mock.EventAnticipator;
 import org.opennms.netmgt.eventd.mock.MockEventIpcManager;
+import org.opennms.netmgt.model.events.EventBuilder;
 import org.opennms.test.mock.EasyMockUtils;
 
 import static com.jayway.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -59,19 +69,28 @@ import static org.junit.Assert.assertEquals;
  */
 public class VacuumdTest {
     private MockEventIpcManager m_mockEventIpcManager;
+    private EventAnticipator m_eventAnticipator;
     private EasyMockUtils m_ezMock = new EasyMockUtils();
     private Connection m_conn;
     private DataSource m_ds;
-
     private boolean m_executeUpdateCalled;
+
+    private static final String SQL_STMT = "UPDATE accounts SET balance=10,000,000 WHERE name=`whoami`";
 
     @Before
     public void setUp() {
         m_mockEventIpcManager = new MockEventIpcManager();
+        m_eventAnticipator = new EventAnticipator();
+        m_mockEventIpcManager.setEventAnticipator(m_eventAnticipator);
 
         m_ds = m_ezMock.createMock(DataSource.class);
         m_conn = m_ezMock.createMock(Connection.class);
-        DataSourceFactory.setInstance("ds", m_ds);
+        DataSourceFactory.setInstance(m_ds);
+    }
+
+    @After
+    public void tearDown() {
+        m_eventAnticipator.verifyAnticipated();
     }
 
     @Test
@@ -87,23 +106,163 @@ public class VacuumdTest {
     }
 
     @Test
+    public void statementWithPeriod() throws Exception {
+        // Build the configuration for a single statement
+        VacuumdConfiguration vacuumdConfig = new VacuumdConfiguration();
+        // Run the statements every second
+        vacuumdConfig.setPeriod(1000);
+
+        Statement statement = new Statement(SQL_STMT, false);
+        vacuumdConfig.addStatement(statement);
+
+        useVacuumdConfig(vacuumdConfig);
+
+        // Setup our mock objects.
+        EasyMock.expect(m_ds.getConnection()).andReturn(m_conn);
+        m_conn.setAutoCommit(true);
+
+        PreparedStatement preparedStatement = m_ezMock.createMock(PreparedStatement.class);
+        EasyMock.expect(m_conn.prepareStatement(SQL_STMT)).andReturn(preparedStatement);
+
+        // Set a flag when the prepared statement is called
+        m_executeUpdateCalled = false;
+        IAnswer<Integer> answer = new IAnswer<Integer>() {
+            @Override
+            public Integer answer() throws Throwable {
+                m_executeUpdateCalled = true;
+                return 0;
+            }
+        };
+        EasyMock.expect(preparedStatement.executeUpdate()).andAnswer(answer);
+        preparedStatement.close();
+        m_conn.close();
+
+        m_ezMock.replayAll();
+
+        assertEquals(false, wasExecuteUpdateCalled().call());
+
+        // Fire up vacuumd
+        Vacuumd vacuumd = new Vacuumd();
+        Vacuumd.setInstance(vacuumd);
+        vacuumd.setEventManager(m_mockEventIpcManager);
+        vacuumd.init();
+        vacuumd.start();
+
+        // Wait until the flag is set, instead of sleeping for a fixed amount
+        // of time. This speeds things up significantly.
+        await().until(wasExecuteUpdateCalled());
+
+        // Verify
+        vacuumd.stop();
+        m_ezMock.verifyAll();
+    }
+
+    @Test
+    public void automationWithAutoEvent() throws Exception {
+        // Build the configuration for a single automation with an auto-event
+        Automation automation = new Automation();
+        automation.setName("testAutomation");
+        automation.setTriggerName("testTrigger");
+        automation.setActionName("testAction");
+        automation.setAutoEventName("testAutoEvent");
+        automation.setInterval(1000);
+
+        Automations automations = new Automations();
+        automations.addAutomation(automation);
+
+        Trigger trigger = new Trigger();
+        trigger.setName("testTrigger");
+        Statement statement = new Statement(SQL_STMT, false);
+        trigger.setStatement(statement);
+
+        Triggers triggers = new Triggers();
+        triggers.addTrigger(trigger);
+
+        Action action = new Action();
+        action.setName("testAction");
+        action.setStatement(statement);
+        Actions actions = new Actions();
+        actions.addAction(action);
+
+        AutoEvent autoEvent = new AutoEvent();
+        autoEvent.setFields("not!a*valid_&field");
+        autoEvent.setName("testAutoEvent");
+        final String testEventUei = "uei.opennms.org/vacuumd/alarmEscalated";
+        autoEvent.setUei(new Uei(testEventUei));
+
+        AutoEvents autoEvents = new AutoEvents();
+        autoEvents.addAutoEvent(autoEvent);
+
+        VacuumdConfiguration vacuumdConfig = new VacuumdConfiguration();
+        vacuumdConfig.setAutomations(automations);
+        vacuumdConfig.setTriggers(triggers);
+        vacuumdConfig.setAutoEvents(autoEvents);
+        vacuumdConfig.setActions(actions);
+        useVacuumdConfig(vacuumdConfig);
+
+        // A database connection
+        EasyMock.expect(m_ds.getConnection()).andReturn(m_conn);
+        m_conn.setAutoCommit(false);
+        m_conn.commit();
+        m_conn.close();
+
+        // A result set for the trigger query
+        ResultSet resultSet = m_ezMock.createMock(ResultSet.class);
+        EasyMock.expect(resultSet.next()).andReturn(false).atLeastOnce();
+        resultSet.beforeFirst();
+        EasyMock.expectLastCall().atLeastOnce();
+        resultSet.close();
+        EasyMock.expectLastCall().atLeastOnce();
+
+        // An SQL statement for trigger query
+        java.sql.Statement sqlStatement = m_ezMock.createMock(java.sql.Statement.class);
+        EasyMock.expect(m_conn.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE,
+                                               ResultSet.CONCUR_READ_ONLY)).andReturn(sqlStatement);
+        EasyMock.expect(sqlStatement.executeQuery(SQL_STMT)).andReturn(resultSet);
+        sqlStatement.close();
+
+        // A prepared statement for the action
+        PreparedStatement preparedStatement = m_ezMock.createMock(PreparedStatement.class);
+        EasyMock.expect(m_conn.prepareStatement(SQL_STMT)).andReturn(preparedStatement);
+        preparedStatement.close();
+
+        m_ezMock.replayAll();
+
+        EventBuilder bldr = new EventBuilder(testEventUei, "Automation");
+        m_eventAnticipator.anticipateEvent(bldr.getEvent());
+
+        // Fire up vacuumd
+        Vacuumd vacuumd = new Vacuumd();
+        Vacuumd.setInstance(vacuumd);
+        vacuumd.setEventManager(m_mockEventIpcManager);
+        vacuumd.init();
+        vacuumd.start();
+
+        // Wait until the flag is set, instead of sleeping for a fixed amount
+        // of time. This speeds things up significantly.
+        await().until(numAnticipatedEventsReceived(), is(1));
+
+        // Verify
+        vacuumd.stop();
+        m_ezMock.verifyAll();
+    }
+
+    @Test
     public void automationWithAction() throws Exception {
         // Build the configuration for a single automation with a
-        // simplebaction
+        // simple action
         Automation automation = new Automation();
-        automation.setActionName("garbageCollect");
-
-        // Set a large interval so it only runs once one startup during our
-        // tests
-        automation.setInterval(99999);
+        automation.setActionName("payday");
+        automation.setInterval(1000);
         automation.setActive(true);
 
         Automations automations = new Automations();
         automations.addAutomation(automation);
 
-        String sql = "DELETE FROM alarms WHERE alarmacktime IS NULL";
-        Statement statement = new Statement(sql, false);
-        Action action = new Action("garbageCollect", "ds", statement);
+        Statement statement = new Statement(SQL_STMT, false);
+        Action action = new Action();
+        action.setName("payday");
+        action.setStatement(statement);
 
         Actions actions = new Actions();
         actions.addAction(action);
@@ -119,7 +278,7 @@ public class VacuumdTest {
         m_conn.setAutoCommit(false);
 
         PreparedStatement preparedStatement = m_ezMock.createMock(PreparedStatement.class);
-        EasyMock.expect(m_conn.prepareStatement(sql)).andReturn(preparedStatement);
+        EasyMock.expect(m_conn.prepareStatement(SQL_STMT)).andReturn(preparedStatement);
 
         // Set a flag when the prepared statement is called
         m_executeUpdateCalled = false;
@@ -141,6 +300,7 @@ public class VacuumdTest {
 
         // Fire up vacuumd
         Vacuumd vacuumd = new Vacuumd();
+        Vacuumd.setInstance(vacuumd);
         vacuumd.setEventManager(m_mockEventIpcManager);
         vacuumd.init();
         vacuumd.start();
@@ -152,6 +312,14 @@ public class VacuumdTest {
         // Verify
         vacuumd.stop();
         m_ezMock.verifyAll();
+    }
+
+    private Callable<Integer> numAnticipatedEventsReceived() {
+        return new Callable<Integer>() {
+            public Integer call() {
+                return m_eventAnticipator.getAnticipatedEventsRecieved().size();
+            }
+        };
     }
 
     private Callable<Boolean> wasExecuteUpdateCalled() {

@@ -40,12 +40,9 @@ import org.opennms.netmgt.scheduler.ScheduleInterval;
  */
 public class AutomationInterval implements ScheduleInterval {
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.opennms.netmgt.scheduler.ScheduleInterval#getInterval()
+    /**
+     * Interval in milliseconds at which the automation should run.
      */
-
     private long m_interval;
 
     /**
@@ -54,7 +51,7 @@ public class AutomationInterval implements ScheduleInterval {
      * </p>
      * 
      * @param interval
-     *            a long.
+     *            Interval in milliseconds at which the automation should run.
      */
     public AutomationInterval(long interval) {
         setInterval(interval);
@@ -84,12 +81,6 @@ public class AutomationInterval implements ScheduleInterval {
         m_interval = interval;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.opennms.netmgt.scheduler.ScheduleInterval#scheduledSuspension()
-     */
     /**
      * <p>
      * scheduledSuspension
