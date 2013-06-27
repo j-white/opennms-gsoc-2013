@@ -19,4 +19,8 @@ public class DataGridProviderFactory {
     public static DataGridProvider getNewInstance() {
         return new HazelcastDataGridProvider();
     }
+
+    public static synchronized void setInstance(DataGridProvider dataGridProvider) {
+        m_instance = dataGridProvider;
+    }
 }

@@ -30,6 +30,7 @@ package org.opennms.core.test.grid;
 
 import java.lang.reflect.Method;
 
+import org.opennms.core.grid.DataGridProviderFactory;
 import org.opennms.core.test.grid.annotations.JUnitGrid;
 import org.springframework.test.context.TestContext;
 import org.springframework.test.context.support.AbstractTestExecutionListener;
@@ -55,7 +56,7 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
             return;
         }
 
-        Hazelcast.shutdownAll();
+        shutdownAndResetProvider();
     }
 
     public void afterTestMethod(TestContext testContext) throws Exception {
@@ -65,7 +66,15 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
             return;
         }
 
+        shutdownAndResetProvider();
+    }
+
+    private void shutdownAndResetProvider() {
+        // Shutdown all of the instances
         Hazelcast.shutdownAll();
+
+        // Reset the default instance - it will no longer work after being shutdown
+        DataGridProviderFactory.setInstance(null);
     }
 
     private static JUnitGrid findAnnotation(final TestContext testContext) {
