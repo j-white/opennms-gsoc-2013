@@ -66,7 +66,7 @@ import org.springframework.util.Assert;
  * @author <a href="http://www.opennms.org/">OpenNMS </a>
  * @version $Id: $
  */
-public final class VacuumdConfigFactory {
+public final class VacuumdConfigFactory implements VacuumdConfigDao {
     /**
      * The singleton instance of this factory
      */
