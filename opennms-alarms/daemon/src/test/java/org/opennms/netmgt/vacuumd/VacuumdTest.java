@@ -166,14 +166,6 @@ public class VacuumdTest implements TemporaryDatabaseAware<MockDatabase>, Initia
     }
     
     /**
-     * Test for running statments
-     */
-    @Test
-    public final void testRunStatements() {
-    	m_vacuumd.executeStatements();
-    }
-    
-    /**
      * This is an attempt at testing scheduled automations.
      * @throws InterruptedException
      */
