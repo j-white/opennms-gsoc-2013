@@ -359,7 +359,7 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.opennms.features</groupId>
+      <groupId>org.opennms.features.clustering</groupId>
       <artifactId>org.opennms.features.clustering.clusterd</artifactId>
       <version>${project.version}</version>
       <scope>compile</scope>
