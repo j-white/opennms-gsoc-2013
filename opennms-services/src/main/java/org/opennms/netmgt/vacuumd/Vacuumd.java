@@ -201,7 +201,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     private void scheduleAutomation(Automation auto) {
         if (auto.getActive()) {
             AutomationProcessor ap = new AutomationProcessor(auto);
-            //ap.scheduleWith(m_scheduler);
+            ap.scheduleWith(m_scheduler);
         }
     }
 
