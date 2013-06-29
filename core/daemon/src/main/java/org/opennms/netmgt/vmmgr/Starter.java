@@ -41,12 +41,9 @@ import java.util.Map.Entry;
 import org.apache.commons.io.IOUtils;
 import org.opennms.core.logging.Logging;
 import org.opennms.netmgt.config.service.Service;
-<<<<<<< HEAD
-=======
 import org.opennms.netmgt.config.service.types.InvokeAtType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
->>>>>>> origin/master
 
 /**
  * <p>
@@ -245,48 +242,10 @@ public class Starter {
     private void start() {
         LOG.debug("Beginning startup");
 
-<<<<<<< HEAD
         List<Service> servicesToStart = Invoker.getStartupServices();
         ServiceManager serviceManager = new ServiceManagerDefault();
         serviceManager.start(servicesToStart);
-
-        log().debug("Startup complete");
-=======
-        MBeanServer server = ManagementFactory.getPlatformMBeanServer();
-        
-        Invoker invoker = new Invoker();
-        invoker.setServer(server);
-        invoker.setAtType(InvokeAtType.START);
-        List<InvokerService> services = InvokerService.createServiceList(Invoker.getDefaultServiceConfigFactory().getServices());
-        invoker.setServices(services);
-        invoker.instantiateClasses();
-
-        List<InvokerResult> resultInfo = invoker.invokeMethods();
-
-        for (InvokerResult result : resultInfo) {
-            if (result != null && result.getThrowable() != null) {
-                Service service = result.getService();
-                String name = service.getName();
-                String className = service.getClassName();
-
-                String message =
-                    "An error occurred while attempting to start the \"" +
-                    name + "\" service (class " + className + ").  "
-                    + "Shutting down and exiting.";
-                LOG.error(message, result.getThrowable());
-                System.err.println(message);
-                result.getThrowable().printStackTrace();
-
-                Manager manager = new Manager();
-                manager.stop();
-                manager.doSystemExit();
-
-                // Shouldn't get here
-                return;
-            }
-        }
         
         LOG.debug("Startup complete");
->>>>>>> origin/master
     }
 }

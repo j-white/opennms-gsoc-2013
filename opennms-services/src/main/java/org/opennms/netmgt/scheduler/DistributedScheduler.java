@@ -44,7 +44,8 @@ import org.opennms.core.grid.Message;
 import org.opennms.core.grid.MessageListener;
 import org.opennms.core.grid.Topic;
 import org.opennms.core.queue.FifoQueueImpl;
-import org.opennms.core.utils.ThreadCategory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
 /**
@@ -102,6 +103,11 @@ public class DistributedScheduler implements Runnable, PausableFiber,
     private String m_name;
 
     private int m_maxSize;
+
+    /**
+     * Logger.
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(LegacyScheduler.class);
 
     public DataGridProvider getDataGridProvider() {
         return m_dataGridProvider;
@@ -171,8 +177,8 @@ public class DistributedScheduler implements Runnable, PausableFiber,
      *             Thrown if an error occurs adding the element to the queue.
      */
     private void schedule(ReadyRunnable runnable, long interval) {
-        if (log().isDebugEnabled()) {
-            log().debug("schedule: Adding ready runnable " + runnable
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("schedule: Adding ready runnable " + runnable
                                 + " at interval " + interval);
         }
 
@@ -181,8 +187,8 @@ public class DistributedScheduler implements Runnable, PausableFiber,
             Long key = Long.valueOf(interval);
             PeekableFifoQueue<ReadyRunnable> queue = m_queues.get(key);
             if (queue == null) {
-                if (log().isDebugEnabled()) {
-                    log().debug("schedule: interval queue did not exist, a new one has been created");
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("schedule: interval queue did not exist, a new one has been created");
                 }
                 queue = new PeekableFifoQueue<ReadyRunnable>();
             }
@@ -191,9 +197,9 @@ public class DistributedScheduler implements Runnable, PausableFiber,
                 queue.add(runnable);
                 m_queues.put(key, queue);
                 m_topic.publish(new TaskScheduledEvent());
-                log().debug("schedule: queue element added, notification performed");
+                LOG.debug("schedule: queue element added, notification performed");
             } catch (InterruptedException e) {
-                log().info("schedule: failed to add new ready runnable instance "
+                LOG.info("schedule: failed to add new ready runnable instance "
                                    + runnable + " to scheduler: " + e, e);
                 Thread.currentThread().interrupt();
             }
@@ -240,7 +246,7 @@ public class DistributedScheduler implements Runnable, PausableFiber,
         m_worker.start();
         m_status = STARTING;
 
-        log().info("start: scheduler started");
+        LOG.info("start: scheduler started");
     }
 
     /**
@@ -256,7 +262,7 @@ public class DistributedScheduler implements Runnable, PausableFiber,
         m_worker.interrupt();
         m_runner.shutdown();
 
-        log().info("stop: scheduler stopped");
+        LOG.info("stop: scheduler stopped");
     }
 
     /**
@@ -358,7 +364,7 @@ public class DistributedScheduler implements Runnable, PausableFiber,
             m_status = RUNNING;
         }
 
-        log().debug("run: scheduler running");
+        LOG.debug("run: scheduler running");
 
         /*
          * Loop until a fatal exception occurs or until the thread is
@@ -374,8 +380,8 @@ public class DistributedScheduler implements Runnable, PausableFiber,
                 if (m_status != RUNNING && m_status != PAUSED
                         && m_status != PAUSE_PENDING
                         && m_status != RESUME_PENDING) {
-                    if (log().isDebugEnabled()) {
-                        log().debug("run: status = " + m_status
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("run: status = " + m_status
                                             + ", time to exit");
                     }
                     break;
@@ -384,7 +390,7 @@ public class DistributedScheduler implements Runnable, PausableFiber,
                 // if paused or pause pending then block
                 while (m_status == PAUSE_PENDING || m_status == PAUSED) {
                     if (m_status == PAUSE_PENDING) {
-                        log().debug("run: pausing.");
+                        LOG.debug("run: pausing.");
                     }
                     m_status = PAUSED;
                     try {
@@ -398,14 +404,14 @@ public class DistributedScheduler implements Runnable, PausableFiber,
                 // if resume pending then change to running
 
                 if (m_status == RESUME_PENDING) {
-                    log().debug("run: resuming.");
+                    LOG.debug("run: resuming.");
 
                     m_status = RUNNING;
                 }
 
                 if (getScheduled() == 0) {
                     try {
-                        log().debug("run: no ready runnables scheduled, waiting...");
+                        LOG.debug("run: no ready runnables scheduled, waiting...");
                         wait();
                     } catch (InterruptedException ex) {
                         break;
@@ -445,8 +451,8 @@ public class DistributedScheduler implements Runnable, PausableFiber,
                             readyRun = in.peek();
                             if (readyRun != null) {
                                 if (readyRun.isReady()) {
-                                    if (log().isDebugEnabled()) {
-                                        log().debug("run: found ready runnable "
+                                    if (LOG.isDebugEnabled()) {
+                                        LOG.debug("run: found ready runnable "
                                                             + readyRun);
                                     }
 
@@ -503,14 +509,10 @@ public class DistributedScheduler implements Runnable, PausableFiber,
 
         }
 
-        log().debug("run: scheduler exiting, state = STOPPED");
+        LOG.debug("run: scheduler exiting, state = STOPPED");
         synchronized (this) {
             m_status = STOPPED;
         }
 
-    }
-
-    private ThreadCategory log() {
-        return ThreadCategory.getInstance(getClass());
     }
 }

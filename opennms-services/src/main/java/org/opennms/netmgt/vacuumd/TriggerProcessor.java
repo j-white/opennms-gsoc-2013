@@ -33,18 +33,17 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import org.opennms.core.utils.ThreadCategory;
 import org.opennms.netmgt.config.vacuumd.Trigger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TriggerProcessor {
+    private static final Logger LOG = LoggerFactory.getLogger(TriggerProcessor.class);
+
     private final Trigger m_trigger;
 
     public TriggerProcessor(String automationName, Trigger trigger) {
         m_trigger = trigger;
-    }
-
-    public ThreadCategory log() {
-        return ThreadCategory.getInstance(getClass());
     }
 
     public Trigger getTrigger() {
@@ -89,17 +88,16 @@ public class TriggerProcessor {
 
             return triggerResultSet;
         } catch (SQLException e) {
-            log().warn("Error executing trigger " + getName(), e);
+            LOG.warn("Error executing trigger " + getName(), e);
             throw e;
         }
     }
 
     /**
-     * This method verifies that the number of rows in the result set of
-     * the trigger match the defined operation in the config. For example,
-     * if the user has specified that the trigger-rows = 5 and the
-     * operator ">", the automation will only run if the result rows is
-     * greater than 5.
+     * This method verifies that the number of rows in the result set of the
+     * trigger match the defined operation in the config. For example, if the
+     * user has specified that the trigger-rows = 5 and the operator ">", the
+     * automation will only run if the result rows is greater than 5.
      * 
      * @param trigRowCount
      * @param trigOp
@@ -111,19 +109,13 @@ public class TriggerProcessor {
             int resultRows) {
 
         if (trigRowCount == 0 || trigOp == null) {
-            log().debug("triggerRowCheck: trigger has no row-count restrictions: operator is: "
-                                + trigOp
-                                + ", row-count is: "
-                                + trigRowCount);
+            LOG.debug("triggerRowCheck: trigger has no row-count restrictions: operator is: "
+                    + trigOp + ", row-count is: " + trigRowCount);
             return true;
         }
 
-        log().debug("triggerRowCheck: Verifying trigger resulting row count "
-                            + resultRows
-                            + " is "
-                            + trigOp
-                            + " "
-                            + trigRowCount);
+        LOG.debug("triggerRowCheck: Verifying trigger resulting row count "
+                + resultRows + " is " + trigOp + " " + trigRowCount);
 
         boolean runAction = false;
         if ("<".equals(trigOp)) {
@@ -148,7 +140,7 @@ public class TriggerProcessor {
 
         }
 
-        log().debug("Row count verification is: " + runAction);
+        LOG.debug("Row count verification is: {}", runAction);
 
         return runAction;
     }

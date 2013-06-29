@@ -118,6 +118,19 @@
       <param name="OnMatch" value="ACCEPT" />
     </filter>
   </appender>
+  <appender class="org.apache.log4j.RollingFileAppender" name="CLUSTERD">
+    <param value="${install.daemonlogs.dir}/clusterd.log" name="File"/>
+    <param value="4" name="MaxBackupIndex"/>
+    <param value="100MB" name="MaxFileSize"/>
+    <layout class="org.apache.log4j.PatternLayout">
+      <param value="%d %-5p [%t] %c{1}: %m%n" name="ConversionPattern"/>
+    </layout>
+    <filter class="org.opennms.core.logging.log4j.MDCFilter">
+      <param name="KeyToMatch" value="prefix"/>
+      <param name="ValueToMatch" value="OpenNMS.Clusterd"/>
+      <param name="OnMatch" value="ACCEPT" />
+    </filter>
+  </appender>
   <appender class="org.apache.log4j.RollingFileAppender" name="DISCOVERY">
     <param value="${install.daemonlogs.dir}/discovery.log" name="File"/>
     <param value="4" name="MaxBackupIndex"/>
@@ -663,6 +676,10 @@
     <level value="debug"/>
     <appender-ref ref="WEB"/>
   </logger>
+  <logger additivity="false" name="com.hazelcast">
+    <level value="debug"/>
+    <appender-ref ref="CLUSTERD"/>
+  </logger>
   <logger additivity="false" name="com.mchange">
     <level value="info"/>
     <appender-ref ref="MISC"/>
@@ -814,6 +831,7 @@
     <appender-ref ref="CAPSD" />
     <appender-ref ref="COLLECTD" />
     <appender-ref ref="CORRELATION" />
+    <appender-ref ref="CLUSTERD" />
     <appender-ref ref="DHCPD" />
     <appender-ref ref="DISCOVERY" />
     <appender-ref ref="EVENTD" />

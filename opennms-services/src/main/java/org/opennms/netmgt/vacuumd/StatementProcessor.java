@@ -7,12 +7,14 @@ import java.sql.SQLException;
 import javax.sql.DataSource;
 
 import org.opennms.core.db.DataSourceFactory;
-import org.opennms.core.utils.ThreadCategory;
 import org.opennms.netmgt.config.vacuumd.Statement;
 import org.opennms.netmgt.scheduler.ClusterRunnable;
 import org.opennms.netmgt.scheduler.Scheduler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class StatementProcessor implements ClusterRunnable {
+    private static final Logger LOG = LoggerFactory.getLogger(StatementProcessor.class);
     private static final long serialVersionUID = 4019877945309435097L;
     private final Statement m_statement;
     private final int m_period;
@@ -24,7 +26,7 @@ public class StatementProcessor implements ClusterRunnable {
     }
 
     private void runUpdate(String sql, boolean transactional) {
-        log().info("Vacuumd executing statement: " + sql);
+        LOG.info("Vacuumd executing statement: " + sql);
         // update the database
         Connection dbConn = null;
 
@@ -40,14 +42,14 @@ public class StatementProcessor implements ClusterRunnable {
             int count = stmt.executeUpdate();
             stmt.close();
 
-            if (log().isDebugEnabled()) {
-                log().debug("Vacuumd: Ran update " + sql + ": this affected "
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Vacuumd: Ran update " + sql + ": this affected "
                                     + count + " rows");
             }
 
             commitRequired = transactional;
         } catch (SQLException ex) {
-            log().error("Vacuumd:  Database error execuating statement  "
+            LOG.error("Vacuumd:  Database error execuating statement  "
                                 + sql, ex);
         } finally {
             if (dbConn != null) {
@@ -95,10 +97,6 @@ public class StatementProcessor implements ClusterRunnable {
 
     private DataSource getDataSourceFactory() {
         return DataSourceFactory.getInstance();
-    }
-
-    private ThreadCategory log() {
-        return ThreadCategory.getInstance(AutomationProcessor.class);
     }
 
     public String toString() {

@@ -31,21 +31,20 @@ package org.opennms.netmgt.vacuumd;
 import java.util.regex.Pattern;
 
 import org.opennms.core.utils.PropertiesUtils;
-import org.opennms.core.utils.ThreadCategory;
 import org.opennms.netmgt.config.vacuumd.Assignment;
 import org.opennms.netmgt.model.events.EventBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EventAssignment {
+
+    private static final Logger LOG = LoggerFactory.getLogger(EventAssignment.class);
 
     static final Pattern s_pattern = Pattern.compile("\\$\\{(\\w+)\\}");
     private final Assignment m_assignment;
 
     public EventAssignment(Assignment assignment) {
         m_assignment = assignment;
-    }
-
-    public ThreadCategory log() {
-        return ThreadCategory.getInstance(getClass());
     }
 
     public void assign(EventBuilder bldr, PropertiesUtils.SymbolTable symbols) {
@@ -55,8 +54,8 @@ public class EventAssignment {
 
         if (m_assignment.getValue().equals(val)
                 && s_pattern.matcher(val).matches()) {
-            // no substitution was made the value was a token pattern so
-            // skip it
+            // no substitution was made the value was a token pattern so skip
+            // it
             return;
         }
 

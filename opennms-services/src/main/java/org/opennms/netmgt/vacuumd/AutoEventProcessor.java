@@ -28,19 +28,22 @@
 
 package org.opennms.netmgt.vacuumd;
 
-import org.opennms.core.utils.ThreadCategory;
 import org.opennms.netmgt.config.vacuumd.AutoEvent;
 import org.opennms.netmgt.model.events.EventBuilder;
 import org.opennms.netmgt.xml.event.Event;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @deprecated Use {@link ActionEventProcessor} instead.
  */
 public class AutoEventProcessor {
 
+    private static final Logger LOG = LoggerFactory.getLogger(ActionProcessor.class);
+
     private final String m_automationName;
     private final AutoEvent m_autoEvent;
-
+    
     /**
      * @deprecated Use {@link ActionEventProcessor} instead.
      */
@@ -48,11 +51,7 @@ public class AutoEventProcessor {
         m_automationName = automationName;
         m_autoEvent = autoEvent;
     }
-
-    public ThreadCategory log() {
-        return ThreadCategory.getInstance(getClass());
-    }
-
+    
     public boolean hasEvent() {
         return m_autoEvent != null;
     }
@@ -70,17 +69,15 @@ public class AutoEventProcessor {
     }
 
     void send() {
-
+        
         if (hasEvent()) {
-            // create and send event
-            log().debug("AutoEventProcessor: Sending auto-event " + getUei()
-                                + " for automation " + m_automationName);
-
+            //create and send event
+            LOG.debug("AutoEventProcessor: Sending auto-event "+getUei()+" for automation "+m_automationName);
+            
             EventBuilder bldr = new EventBuilder(getUei(), "Automation");
             sendEvent(bldr.getEvent());
         } else {
-            log().debug("AutoEventProcessor: No auto-event for automation "
-                                + m_automationName);
+            LOG.debug("AutoEventProcessor: No auto-event for automation {}", m_automationName);
         }
     }
 

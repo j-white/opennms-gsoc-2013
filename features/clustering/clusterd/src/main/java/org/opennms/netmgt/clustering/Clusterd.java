@@ -32,15 +32,17 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.opennms.core.utils.ThreadCategory;
 import org.opennms.netmgt.config.ServiceConfigDao;
 import org.opennms.netmgt.config.ServiceConfigFactory;
 import org.opennms.netmgt.config.service.Service;
 import org.opennms.netmgt.config.service.types.ServiceType;
 import org.opennms.netmgt.daemon.AbstractServiceDaemon;
 import org.opennms.netmgt.vmmgr.ServiceManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Required;
+import org.springframework.util.Assert;
 
 /**
  * Clusterd is responsible for electing a leader amongst the cluster members.
@@ -94,6 +96,11 @@ public class Clusterd extends AbstractServiceDaemon implements
     public static final int LEADER_SLEEP_MS = 500;
 
     /**
+     * Logger
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(Clusterd.class);
+
+    /**
      * Default constructor.
      */
     public Clusterd() {
@@ -106,21 +113,20 @@ public class Clusterd extends AbstractServiceDaemon implements
         if (m_serviceConfigDao == null) {
             try {
                 ServiceConfigFactory.init();
+                m_serviceConfigDao = ServiceConfigFactory.getInstance();
             } catch (IOException e) {
-                throw new RuntimeException(
-                                           "Failed to load the service configuration.",
-                                           e);
+                LOG.error("Failed to load the service configuration.", e);
             }
-            m_serviceConfigDao = ServiceConfigFactory.getInstance();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     protected void onStart() {
-        assert (m_leaderSelector != null);
-        assert (m_serviceManager != null);
-        log().debug("Starting the leader selector.");
+        Assert.state(m_serviceConfigDao != null, "serviceConfigDao must be set");
+        Assert.state(m_leaderSelector != null, "leaderSelector must be set");
+        Assert.state(m_serviceManager != null, "serviceManager must be set");
+        LOG.debug("Starting the leader selector.");
         m_stopped = false;
         m_leaderSelector.start();
     }
@@ -128,7 +134,7 @@ public class Clusterd extends AbstractServiceDaemon implements
     /** {@inheritDoc} */
     @Override
     protected void onStop() {
-        log().debug("Stopping the leader selector.");
+        LOG.debug("Stopping the leader selector.");
         m_leaderSelector.stop();
         if (m_leaderThread != null) {
             m_leaderThread.interrupt();
@@ -149,7 +155,7 @@ public class Clusterd extends AbstractServiceDaemon implements
      */
     @Override
     public void takeLeadership() {
-        log().info("Node was elected leader.");
+        LOG.info("Node was elected leader.");
 
         // Get the list of vanilla services that are not running
         List<Service> vanillaServices = m_serviceConfigDao.getServicesOfType(ServiceType.VANILLA);
@@ -161,10 +167,10 @@ public class Clusterd extends AbstractServiceDaemon implements
         }
 
         // Start those who need starting
-        log().debug("Starting " + servicesToStart.size() + " services.");
+        LOG.debug("Starting " + servicesToStart.size() + " services.");
         m_serviceManager.start(servicesToStart);
 
-        log().debug("Done starting the services. Keeping leadership until we're stopped.");
+        LOG.debug("Done starting the services. Keeping leadership until we're stopped.");
         try {
             while (true) {
                 Thread.sleep(LEADER_SLEEP_MS);
@@ -176,7 +182,7 @@ public class Clusterd extends AbstractServiceDaemon implements
             // Reset the interrupted flag
             Thread.interrupted();
         } finally {
-            log().info("Relinquishing leadership.");
+            LOG.info("Relinquishing leadership.");
             m_leaderThread = null;
         }
     }
@@ -238,12 +244,5 @@ public class Clusterd extends AbstractServiceDaemon implements
      */
     public void setServiceManager(ServiceManager serviceManager) {
         m_serviceManager = serviceManager;
-    }
-
-    /**
-     * Logger
-     */
-    public ThreadCategory log() {
-        return ThreadCategory.getInstance(getClass());
     }
 }

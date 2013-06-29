@@ -33,10 +33,11 @@ import java.util.List;
 
 import javax.management.MBeanServer;
 
-import org.opennms.core.utils.ThreadCategory;
 import org.opennms.netmgt.config.service.Service;
 import org.opennms.netmgt.config.service.types.InvokeAtType;
 import org.opennms.netmgt.vmmgr.Invoker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Allows services to be started or stopped.
@@ -49,6 +50,8 @@ import org.opennms.netmgt.vmmgr.Invoker;
  * 
  */
 public class ServiceManagerDefault implements ServiceManager {
+    private static final Logger LOG = LoggerFactory.getLogger(ServiceManagerDefault.class);
+
     private MBeanServer m_mbeanServer;
 
     /**
@@ -97,7 +100,7 @@ public class ServiceManagerDefault implements ServiceManager {
                                                className,
                                                exitOnFailure ? " Shutting down and exiting."
                                                             : "");
-                log().fatal(message, result.getThrowable());
+                LOG.error(message, result.getThrowable());
                 System.err.println(message);
                 result.getThrowable().printStackTrace();
 
@@ -114,7 +117,7 @@ public class ServiceManagerDefault implements ServiceManager {
             }
 
             // The service was successfully started, add it to the registry
-            log().debug("Succesfully started "
+            LOG.debug("Succesfully started "
                                 + result.getService().getName());
             ServiceRegister.getInstance().addService(result.getService());
         }
@@ -137,7 +140,7 @@ public class ServiceManagerDefault implements ServiceManager {
         for (InvokerResult result : resultInfo) {
             if (result != null) {
                 // The service was stopped, remove it from the registry
-                log().debug("Succesfully stopped "
+                LOG.debug("Succesfully stopped "
                                     + result.getService().getName());
                 ServiceRegister.getInstance().removeService(result.getService());
             }
@@ -147,12 +150,5 @@ public class ServiceManagerDefault implements ServiceManager {
     /** {@inheritDoc} */
     public boolean isStarted(Service service) {
         return ServiceRegister.getInstance().getServices().contains(service);
-    }
-
-    /**
-     * Logger
-     */
-    private ThreadCategory log() {
-        return ThreadCategory.getInstance(getClass());
     }
 }

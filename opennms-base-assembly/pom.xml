@@ -360,6 +360,12 @@
     </dependency>
     <dependency>
       <groupId>org.opennms.features</groupId>
+      <artifactId>org.opennms.features.clustering.clusterd</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.opennms.features</groupId>
       <artifactId>org.opennms.features.access-point-monitor</artifactId>
       <version>${project.version}</version>
       <scope>compile</scope>

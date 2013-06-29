@@ -33,7 +33,8 @@ import java.util.concurrent.locks.Lock;
 
 import org.opennms.core.grid.DataGridProvider;
 
-import org.opennms.core.utils.ThreadCategory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Required;
 
@@ -83,6 +84,11 @@ public class LeaderSelector implements Runnable {
     public static final String LEADER_LOCK_ID = "org.opennms.netmgt.clustering.LeaderSelector.LOCK";
 
     /**
+     * Logger
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(Clusterd.class);
+
+    /**
      * Default constructor.
      */
     public LeaderSelector() {
@@ -116,15 +122,15 @@ public class LeaderSelector implements Runnable {
 
     @Override
     public void run() {
-        log().debug("Using distributed lock from " + m_dataGridProvider);
+        LOG.debug("Using distributed lock from " + m_dataGridProvider);
         Lock lock = m_dataGridProvider.getLock(LEADER_LOCK_ID);
 
-        log().debug("Waiting for leader lock...");
+        LOG.debug("Waiting for leader lock...");
         while (true) {
             try {
                 if (lock.tryLock(LOCK_WAIT_MS, TimeUnit.MILLISECONDS)) {
                     try {
-                        log().debug("Got leader lock!");
+                        LOG.debug("Got leader lock!");
                         m_listener.takeLeadership();
                     } finally {
                         lock.unlock();
@@ -132,11 +138,11 @@ public class LeaderSelector implements Runnable {
                 }
 
                 if (m_stopped) {
-                    log().debug("Stopping...");
+                    LOG.debug("Stopping...");
                     break;
                 }
             } catch (InterruptedException e) {
-                log().info("Interrupted...", e);
+                LOG.info("Interrupted...", e);
                 break;
             }
         }
@@ -157,9 +163,5 @@ public class LeaderSelector implements Runnable {
 
     public void setDataGridProvider(DataGridProvider dataGridProvider) {
         m_dataGridProvider = dataGridProvider;
-    }
-
-    private ThreadCategory log() {
-        return ThreadCategory.getInstance(getClass());
     }
 }

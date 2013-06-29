@@ -39,10 +39,12 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.opennms.core.utils.ThreadCategory;
 import org.opennms.netmgt.config.vacuumd.Action;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ActionProcessor {
+    private static final Logger LOG = LoggerFactory.getLogger(ActionProcessor.class);
 
     private final String m_automationName;
     private final Action m_action;
@@ -60,10 +62,6 @@ public class ActionProcessor {
         return m_action;
     }
 
-    public ThreadCategory log() {
-        return ThreadCategory.getInstance(getClass());
-    }
-
     String getActionSQL() {
         return getAction().getStatement().getContent();
     }
@@ -71,9 +69,8 @@ public class ActionProcessor {
     PreparedStatement createPreparedStatement() throws SQLException {
         String actionJDBC = getActionSQL().replaceAll("\\$\\{\\w+\\}", "?");
 
-        log().debug("createPrepareStatement: This action SQL: "
-                            + getActionSQL() + "\nTurned into this: "
-                            + actionJDBC);
+        LOG.debug("createPrepareStatement: This action SQL: "
+                + getActionSQL() + "\nTurned into this: " + actionJDBC);
 
         Connection conn = Transaction.getConnection(m_action.getDataSource());
         PreparedStatement stmt = conn.prepareStatement(actionJDBC);
@@ -99,14 +96,14 @@ public class ActionProcessor {
         Pattern pattern = Pattern.compile(expression);
         Matcher matcher = pattern.matcher(targetString);
 
-        log().debug("getTokenizedColumns: processing string: " + targetString);
+        LOG.debug("getTokenizedColumns: processing string: {}", targetString);
 
         List<String> tokens = new ArrayList<String>();
         int count = 0;
         while (matcher.find()) {
             count++;
-            log().debug("getTokenizedColumns: Token " + count + ": "
-                                + matcher.group(1));
+            LOG.debug("getTokenizedColumns: Token " + count + ": "
+                    + matcher.group(1));
 
             tokens.add(matcher.group(1));
         }
@@ -139,13 +136,13 @@ public class ActionProcessor {
                                           Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(targetString);
 
-        log().debug("getTokenCount: processing string: " + targetString);
+        LOG.debug("getTokenCount: processing string: {}", targetString);
 
         int count = 0;
         while (matcher.find()) {
             count++;
-            log().debug("getTokenCount: Token " + count + ": "
-                                + matcher.group(1));
+            LOG.debug("getTokenCount: Token " + count + ": "
+                    + matcher.group(1));
         }
         return count;
     }
@@ -153,10 +150,9 @@ public class ActionProcessor {
     boolean execute() throws SQLException {
         // No trigger defined, just running the action.
         if (getTokenCount(getActionSQL()) != 0) {
-            log().info("execute: not running action: "
-                               + m_action.getName()
-                               + ".  Action contains tokens in an automation ("
-                               + m_automationName + ") with no trigger.");
+            LOG.info("execute: not running action: " + m_action.getName()
+                    + ".  Action contains tokens in an automation ("
+                    + m_automationName + ") with no trigger.");
             return false;
         } else {
             // Convert the sql to a PreparedStatement
@@ -226,7 +222,7 @@ public class ActionProcessor {
     public boolean resultSetHasRequiredActionColumns(ResultSet rs,
             Collection<String> actionColumns) {
 
-        log().debug("resultSetHasRequiredActionColumns: Verifying required action columns in trigger ResultSet...");
+        LOG.debug("resultSetHasRequiredActionColumns: Verifying required action columns in trigger ResultSet...");
 
         if (actionColumns.isEmpty()) {
             return true;
@@ -247,9 +243,9 @@ public class ActionProcessor {
                 if (rs.findColumn(actionColumnName) > 0) {
                 }
             } catch (SQLException e) {
-                log().warn("resultSetHasRequiredActionColumns: Trigger ResultSet does NOT have required action columns.  Missing: "
-                                   + actionColumnName);
-                log().warn(e.getMessage());
+                LOG.warn("resultSetHasRequiredActionColumns: Trigger ResultSet does NOT have required action columns.  Missing: {}",
+                         actionColumnName);
+                LOG.warn(e.getMessage());
                 verified = false;
             }
         }

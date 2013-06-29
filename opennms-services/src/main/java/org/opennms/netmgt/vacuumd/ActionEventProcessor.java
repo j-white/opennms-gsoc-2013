@@ -33,15 +33,18 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.opennms.core.utils.ThreadCategory;
 import org.opennms.core.utils.PropertiesUtils.SymbolTable;
 import org.opennms.netmgt.config.vacuumd.ActionEvent;
 import org.opennms.netmgt.config.vacuumd.Assignment;
 import org.opennms.netmgt.model.events.EventBuilder;
 import org.opennms.netmgt.model.events.Parameter;
 import org.opennms.netmgt.xml.event.Event;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ActionEventProcessor {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ActionEventProcessor.class);
 
     private final String m_automationName;
     private final ActionEvent m_actionEvent;
@@ -65,10 +68,6 @@ public class ActionEventProcessor {
 
     }
 
-    public ThreadCategory log() {
-        return ThreadCategory.getInstance(getClass());
-    }
-
     public boolean hasEvent() {
         return m_actionEvent != null;
     }
@@ -79,14 +78,14 @@ public class ActionEventProcessor {
             // the uei will be set by the event assignments
             EventBuilder bldr = new EventBuilder(null, "Automation");
             buildEvent(bldr, new InvalidSymbolTable());
-            log().debug("ActionEventProcessor: Sending action-event "
-                                + bldr.getEvent().getUei()
-                                + " for automation " + m_automationName);
+            LOG.debug("ActionEventProcessor: Sending action-event "
+                    + bldr.getEvent().getUei() + " for automation "
+                    + m_automationName);
             sendEvent(bldr.getEvent());
 
         } else {
-            log().debug("ActionEventProcessor: No action-event for automation "
-                                + m_automationName);
+            LOG.debug("ActionEventProcessor: No action-event for automation {}",
+                      m_automationName);
         }
     }
 
@@ -103,8 +102,8 @@ public class ActionEventProcessor {
     void processTriggerResults(TriggerResults triggerResults)
             throws SQLException {
         if (!hasEvent()) {
-            log().debug("processTriggerResults: No action-event for automation "
-                                + m_automationName);
+            LOG.debug("processTriggerResults: No action-event for automation {}",
+                      m_automationName);
             return;
         }
 
@@ -128,9 +127,9 @@ public class ActionEventProcessor {
             } catch (SQLExceptionHolder holder) {
                 holder.rethrow();
             }
-            log().debug("processTriggerResults: Sending action-event "
-                                + bldr.getEvent().getUei()
-                                + " for automation " + m_automationName);
+            LOG.debug("processTriggerResults: Sending action-event "
+                    + bldr.getEvent().getUei() + " for automation "
+                    + m_automationName);
             sendEvent(bldr.getEvent());
         }
 

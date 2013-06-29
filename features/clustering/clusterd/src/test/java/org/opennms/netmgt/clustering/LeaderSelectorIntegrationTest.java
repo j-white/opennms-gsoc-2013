@@ -40,7 +40,8 @@ import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.test.MockLogAppender;
 import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
 import org.opennms.core.test.grid.annotations.JUnitGrid;
-import org.opennms.core.utils.ThreadCategory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
@@ -73,6 +74,11 @@ public class LeaderSelectorIntegrationTest implements InitializingBean {
     private Object leaderLock = new Object();
 
     private final static int NUMBER_OF_CLIENTS = 3;
+
+    /**
+     * Logger
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(LeaderSelectorIntegrationTest.class);
 
     @Override
     public void afterPropertiesSet() {
@@ -120,16 +126,16 @@ public class LeaderSelectorIntegrationTest implements InitializingBean {
             synchronized (leaderLock) {
                 m_isLeader = true;
             }
-            log().debug(m_id + " was elected leader for the "
+            LOG.debug(m_id + " was elected leader for the "
                                 + ++m_leaderCount + "th time.");
 
             int waitMillis = (int) (500 * Math.random()) + 500;
-            log().debug(m_id + " sleeping for " + waitMillis + " ms");
+            LOG.debug(m_id + " sleeping for " + waitMillis + " ms");
 
             try {
                 Thread.sleep(waitMillis);
             } catch (InterruptedException e) {
-                log().error(m_id + " was interrupted.");
+                LOG.error(m_id + " was interrupted.");
                 Thread.currentThread().interrupt();
             } finally {
                 synchronized (leaderLock) {
@@ -140,10 +146,6 @@ public class LeaderSelectorIntegrationTest implements InitializingBean {
 
         public boolean isLeader() {
             return m_isLeader;
-        }
-
-        private ThreadCategory log() {
-            return ThreadCategory.getInstance(getClass());
         }
     }
 
@@ -196,9 +198,5 @@ public class LeaderSelectorIntegrationTest implements InitializingBean {
                 return getNumActiveLeaders(clients) > 0;
             }
         };
-    }
-
-    public ThreadCategory log() {
-        return ThreadCategory.getInstance(getClass());
     }
 }

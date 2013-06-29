@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 import org.exolab.castor.xml.MarshalException;
 import org.exolab.castor.xml.ValidationException;
@@ -50,10 +49,11 @@ import org.opennms.netmgt.model.events.EventBuilder;
 import org.opennms.netmgt.model.events.EventIpcManager;
 import org.opennms.netmgt.model.events.EventListener;
 import org.opennms.netmgt.scheduler.DistributedScheduler;
-import org.opennms.netmgt.scheduler.LegacyScheduler;
 import org.opennms.netmgt.scheduler.Scheduler;
 import org.opennms.netmgt.xml.event.Event;
 import org.opennms.netmgt.xml.event.Parm;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements a daemon whose job it is to run periodic updates against the
@@ -71,6 +71,8 @@ import org.opennms.netmgt.xml.event.Parm;
  * @author <a href=mailto:dj@opennms.org>DJ Gregor</a>
  */
 public class Vacuumd extends AbstractServiceDaemon implements EventListener {
+
+    private static final Logger LOG = LoggerFactory.getLogger(Vacuumd.class);
 
     private static volatile Vacuumd m_singleton;
 
@@ -114,18 +116,18 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     @Override
     protected void onInit() {
         try {
-            log().info("Loading the configuration file.");
+            LOG.info("Loading the configuration file.");
             VacuumdConfigFactory.init();
             getEventManager().addEventListener(this,
                                                EventConstants.RELOAD_VACUUMD_CONFIG_UEI);
 
             initializeDataSources();
         } catch (Throwable ex) {
-            log().error("Failed to load outage configuration", ex);
+            LOG.error("Failed to load outage configuration", ex);
             throw new UndeclaredThrowableException(ex);
         }
 
-        log().info("Vacuumd initialization complete");
+        LOG.info("Vacuumd initialization complete");
 
         createScheduler();
         scheduleAutomations();
@@ -170,11 +172,11 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
 
     private void createScheduler() {
         try {
-            log().debug("init: Creating Vacuumd scheduler");
+            LOG.debug("init: Creating Vacuumd scheduler");
             m_scheduler = new DistributedScheduler("Vacuumd", 2);
             //m_scheduler = new LegacyScheduler("Vacuumd", 2);
         } catch (RuntimeException e) {
-            log().fatal("init: Failed to create Vacuumd scheduler: " + e, e);
+            LOG.error("init: Failed to create Vacuumd scheduler: " + e, e);
             throw e;
         }
     }
@@ -199,7 +201,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     private void scheduleAutomation(Automation auto) {
         if (auto.getActive()) {
             AutomationProcessor ap = new AutomationProcessor(auto);
-            ap.scheduleWith(m_scheduler);
+            //ap.scheduleWith(m_scheduler);
         }
     }
 
@@ -250,18 +252,18 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     }
 
     private void handleReloadConfigEvent() {
-        log().info("onEvent: reloading configuration...");
+        LOG.info("onEvent: reloading configuration...");
 
         EventBuilder ebldr = null;
 /*
         try {
-            log().debug("onEvent: Number of elements in schedule:"
+            LOG.debug("onEvent: Number of elements in schedule:"
                                 + m_scheduler.getScheduled()
                                 + "; calling stop on scheduler...");
             stop();
             ExecutorService runner = m_scheduler.getRunner();
             while (!runner.isShutdown() || m_scheduler.getStatus() != STOPPED) {
-                log().debug("onEvent: waiting for scheduler to stop."
+                LOG.debug("onEvent: waiting for scheduler to stop."
                                     + " Current status of scheduler: "
                                     + m_scheduler.getStatus()
                                     + "; Current status of runner: "
@@ -270,24 +272,24 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
                                                                                   : "RUNNING")));
                 Thread.sleep(500);
             }
-            log().debug("onEvent: Current status of scheduler: "
+            LOG.debug("onEvent: Current status of scheduler: "
                                 + m_scheduler.getStatus()
                                 + "; Current status of runner: "
                                 + (runner.isTerminated() ? "TERMINATED"
                                                         : (runner.isShutdown() ? "SHUTDOWN"
                                                                               : "RUNNING")));
-            log().debug("onEvent: Number of elements in schedule:"
+            LOG.debug("onEvent: Number of elements in schedule:"
                                 + m_scheduler.getScheduled());
-            log().debug("onEvent: reloading vacuumd configuration.");
+            LOG.debug("onEvent: reloading vacuumd configuration.");
 
             VacuumdConfigFactory.reload();
-            log().debug("onEvent: creating new schedule and rescheduling automations.");
+            LOG.debug("onEvent: creating new schedule and rescheduling automations.");
 
             init();
-            log().debug("onEvent: restarting vacuumd and scheduler.");
+            LOG.debug("onEvent: restarting vacuumd and scheduler.");
 
             start();
-            log().debug("onEvent: Number of elements in schedule:"
+            LOG.debug("onEvent: Number of elements in schedule:"
                                 + m_scheduler.getScheduled());
 
             ebldr = new EventBuilder(
@@ -295,7 +297,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
                                      getName());
             ebldr.addParam(EventConstants.PARM_DAEMON_NAME, "Vacuumd");
         } catch (IOException e) {
-            log().error("onEvent: IO problem reading vacuumd configuration: "
+            LOG.error("onEvent: IO problem reading vacuumd configuration: "
                                 + e, e);
             ebldr = new EventBuilder(
                                      EventConstants.RELOAD_DAEMON_CONFIG_FAILED_UEI,
@@ -304,7 +306,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
             ebldr.addParam(EventConstants.PARM_REASON,
                            e.getLocalizedMessage().substring(0, 128));
         } catch (InterruptedException e) {
-            log().error("onEvent: Problem interrupting current Vacuumd Thread: "
+            LOG.error("onEvent: Problem interrupting current Vacuumd Thread: "
                                 + e, e);
             ebldr = new EventBuilder(
                                      EventConstants.RELOAD_DAEMON_CONFIG_FAILED_UEI,
@@ -314,7 +316,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
                            e.getLocalizedMessage().substring(0, 128));
         }
     */
-        log().info("onEvent: completed configuration reload.");
+        LOG.info("onEvent: completed configuration reload.");
 
         if (ebldr != null) {
             m_eventMgr.sendNow(ebldr.getEvent());
