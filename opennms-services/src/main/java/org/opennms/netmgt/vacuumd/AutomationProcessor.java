@@ -33,11 +33,9 @@ import java.sql.SQLException;
 import java.util.Date;
 
 import org.opennms.netmgt.config.VacuumdConfigDao;
-import org.opennms.netmgt.config.VacuumdConfigFactory;
 import org.opennms.netmgt.config.vacuumd.ActionEvent;
 import org.opennms.netmgt.config.vacuumd.Automation;
 import org.opennms.netmgt.scheduler.ClusterRunnable;
-import org.opennms.netmgt.scheduler.Schedule;
 import org.opennms.netmgt.scheduler.Scheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
