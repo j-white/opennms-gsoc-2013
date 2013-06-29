@@ -247,7 +247,7 @@ maintained
     <class-name>org.opennms.netmgt.daemon.SimpleSpringContextJmxServiceDaemon</class-name>
     <attribute>
       <name>LoggingPrefix</name>
-      <value type="java.lang.String">Provisiond</value>
+      <value type="java.lang.String">provisiond</value>
     </attribute>
     <attribute>
       <name>SpringContext</name>
@@ -263,7 +263,7 @@ maintained
     <class-name>org.opennms.netmgt.daemon.SimpleSpringContextJmxServiceDaemon</class-name>
     <attribute>
       <name>LoggingPrefix</name>
-      <value type="java.lang.String">Reportd</value>
+      <value type="java.lang.String">reportd</value>
     </attribute>
     <attribute>
       <name>SpringContext</name>
@@ -280,7 +280,7 @@ maintained
     <class-name>org.opennms.netmgt.daemon.SimpleSpringContextJmxServiceDaemon</class-name>
     <attribute>
       <name>LoggingPrefix</name>
-      <value type="java.lang.String">Alarmd</value>
+      <value type="java.lang.String">alarmd</value>
     </attribute>
     <attribute>
       <name>SpringContext</name>
@@ -296,7 +296,7 @@ maintained
     <class-name>org.opennms.netmgt.daemon.SimpleSpringContextJmxServiceDaemon</class-name>
     <attribute>
       <name>LoggingPrefix</name>
-      <value type="java.lang.String">Ackd</value>
+      <value type="java.lang.String">ackd</value>
     </attribute>
     <attribute>
       <name>SpringContext</name>

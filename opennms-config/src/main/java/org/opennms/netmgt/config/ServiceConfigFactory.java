@@ -34,7 +34,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.opennms.core.utils.ConfigFileConstants;
-import org.opennms.core.utils.ThreadCategory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.opennms.core.xml.JaxbUtils;
 import org.opennms.netmgt.config.service.Service;
 import org.opennms.netmgt.config.service.ServiceConfiguration;
@@ -58,6 +59,8 @@ import org.opennms.netmgt.config.service.types.ServiceType;
  * @author <a href="mailto:weave@oculan.com">Weave</a>
  */
 public final class ServiceConfigFactory implements ServiceConfigDao {
+    private static final Logger LOG = LoggerFactory.getLogger(ServiceConfigFactory.class);
+
     /**
      * The singleton instance of this factory
      */
@@ -104,9 +107,8 @@ public final class ServiceConfigFactory implements ServiceConfigDao {
 
         File cfgFile = ConfigFileConstants.getFile(ConfigFileConstants.SERVICE_CONF_FILE_NAME);
 
-        ThreadCategory log = ThreadCategory.getInstance(ServiceConfigFactory.class);
-        if (log.isDebugEnabled())
-            log.debug("ServiceConfigFactory.init: config file path " + cfgFile.getPath());
+
+        LOG.debug("ServiceConfigFactory.init: config file path {}", cfgFile.getPath());
 
         m_singleton = new ServiceConfigFactory(cfgFile.getPath());
         m_loaded = true;

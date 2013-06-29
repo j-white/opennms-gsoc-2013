@@ -41,16 +41,18 @@ import java.util.TreeMap;
 import javax.management.MBeanServer;
 import javax.management.MBeanServerFactory;
 
-import org.apache.log4j.LogManager;
-import org.opennms.core.utils.ThreadCategory;
 import org.opennms.netmgt.config.service.Service;
 import org.opennms.netmgt.config.service.types.InvokeAtType;
 import org.opennms.netmgt.icmp.Pinger;
 import org.opennms.netmgt.icmp.PingerFactory;
+import org.opennms.core.logging.Logging;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * <p>
- * The Manager is responsible for launching/starting all services in the VM
+ * The Manager is reponsible for launching/starting all services in the VM
  * that it is started for. The Manager operates in two modes, normal and
  * server
  * </p>
@@ -63,7 +65,7 @@ import org.opennms.netmgt.icmp.PingerFactory;
  * <p>
  * server mode: In the server mode, the Manager starts up and listens on the
  * 'control-broadcast' JMS topic for 'start' control messages for services in
- * its VM and a stop control message for itself. When a start for a service is
+ * its VM and a stop control messge for itself. When a start for a service is
  * received, it launches only that service and sends a successful 'running' or
  * an 'error' response to the Controller
  * </p>
@@ -78,10 +80,13 @@ import org.opennms.netmgt.icmp.PingerFactory;
  * @author <a href="http://www.opennms.org">OpenNMS.org</a>
  */
 public class Manager implements ManagerMBean {
+	
+	private static final Logger LOG = LoggerFactory.getLogger(Manager.class);
+	
     /**
      * The log4j category used to log debug messages and statements.
      */
-    private static final String LOG4J_CATEGORY = "OpenNMS.Manager";
+    private static final String LOG4J_CATEGORY = "manager";
     private static final String m_osName = System.getProperty("os.name") == null? "" : System.getProperty("os.name").toLowerCase();
 
     /**
@@ -97,13 +102,13 @@ public class Manager implements ManagerMBean {
     }
     
     private void stop(MBeanServer server) {
-        log().debug("Beginning shutdown");
+        LOG.debug("Beginning shutdown");
 
         ServiceManager serviceManager = new ServiceManagerDefault();
         List<Service> allServicesStarted = ServiceRegister.getInstance().getServices();
         serviceManager.stop(allServicesStarted);
 
-        log().debug("Shutdown complete");
+        LOG.debug("Shutdown complete");
     }
     
     /**
@@ -123,7 +128,7 @@ public class Manager implements ManagerMBean {
     }
     
     private List<String> status(final MBeanServer server) {
-        log().debug("Beginning status check");
+        LOG.debug("Beginning status check");
         final Invoker invoker = new Invoker();
         invoker.setServer(server);
         invoker.setAtType(InvokeAtType.STATUS);
@@ -142,7 +147,7 @@ public class Manager implements ManagerMBean {
                 statusInfo.add("Status: " + invokerResult.getMbean().getObjectName() + " = STATUS_CHECK_ERROR");
             }
         }
-        log().debug("Status check complete");
+        LOG.debug("Status check complete");
         
         return statusInfo;
     }
@@ -157,16 +162,16 @@ public class Manager implements ManagerMBean {
     public void doSystemExit() {
         setLogPrefix();
 
-        log().debug("doSystemExit called");
+        LOG.debug("doSystemExit called");
         
-        if (log().isDebugEnabled()) {
+        if (LOG.isDebugEnabled()) {
             dumpThreads();
             
             Runtime r = Runtime.getRuntime();
-            log().debug("memory usage (free/used/total/max allowed): " + r.freeMemory() + "/" + (r.totalMemory() - r.freeMemory()) + "/" + r.totalMemory() + "/" + (r.maxMemory() == Long.MAX_VALUE ? "infinite" : r.maxMemory()));
+            LOG.debug("memory usage (free/used/total/max allowed): " + r.freeMemory() + "/" + (r.totalMemory() - r.freeMemory()) + "/" + r.totalMemory() + "/" + (r.maxMemory() == Long.MAX_VALUE ? "infinite" : r.maxMemory()));
         }
         
-        log().info("calling System.exit(1)");
+        LOG.info("calling System.exit(1)");
         shutdownLogging();
         System.exit(1);
     }
@@ -179,7 +184,7 @@ public class Manager implements ManagerMBean {
                 daemons++;
             }
         }
-        log().debug("Thread dump of " + threads.size() + " threads (" + daemons + " daemons):");
+        LOG.debug("Thread dump of {} threads ({} daemons):", threads.size(), daemons);
         Map<Thread, StackTraceElement[]> sortedThreads = new TreeMap<Thread, StackTraceElement[]>(new Comparator<Thread>() {
             @Override
             public int compare(Thread t1, Thread t2) {
@@ -190,16 +195,15 @@ public class Manager implements ManagerMBean {
 
         for (Entry<Thread, StackTraceElement[]> entry : sortedThreads.entrySet()) {
             Thread thread = entry.getKey();
-            log().debug("Thread " + thread.getId() + (thread.isDaemon() ? " (daemon)" : "") + ": " + thread + " (state: " + thread.getState() + ")");
+            LOG.debug("Thread {}{}: {} (state: {})", thread.getId(), (thread.isDaemon() ? " (daemon)" : ""), thread, thread.getState() );
             for (StackTraceElement e : entry.getValue()) {
-                log().debug("\t" + e);
+                LOG.debug("\t{}", e);
             }
         }
-        log().debug("Thread dump completed.");
+        LOG.debug("Thread dump completed.");
     }
 
     private void shutdownLogging() {
-        LogManager.shutdown();
     }
     
     /**
@@ -226,16 +230,16 @@ public class Manager implements ManagerMBean {
         boolean hasV4 = pinger.isV4Available();
         boolean hasV6 = pinger.isV6Available();
 
-        log().info("Using ICMP implementation: " + pinger.getClass().getName());
-        log().info("IPv4 ICMP available? " + hasV4);
-        log().info("IPv6 ICMP available? " + hasV6);
+        LOG.info("Using ICMP implementation: {}", pinger.getClass().getName());
+        LOG.info("IPv4 ICMP available? {}", hasV4);
+        LOG.info("IPv6 ICMP available? {}", hasV6);
 
         if (!hasV4) {
             try {
                 pinger.initialize4();
                 hasV4 = true;
             } catch (final Exception e) {
-                log().warn("Failed to initialize IPv4 stack.", e);
+                LOG.warn("Failed to initialize IPv4 stack.", e);
             }
         }
 
@@ -244,7 +248,7 @@ public class Manager implements ManagerMBean {
                 pinger.initialize6();
                 hasV6 = true;
             } catch (final Exception e) {
-                log().warn("Failed to initialize IPv6 stack.", e);
+                LOG.warn("Failed to initialize IPv6 stack.", e);
             }
 
         }
@@ -275,11 +279,7 @@ public class Manager implements ManagerMBean {
     }
 
     private void setLogPrefix() {
-        ThreadCategory.setPrefix(LOG4J_CATEGORY);
-    }
-
-    private ThreadCategory log() {
-        return ThreadCategory.getInstance(getClass());
+        Logging.putPrefix(LOG4J_CATEGORY);
     }
 
     private List<MBeanServer> getMBeanServers() {

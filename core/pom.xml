@@ -32,6 +32,7 @@
     <module>grid</module>
     <module>icmp-jna</module>
     <module>lib</module>
+    <module>logging-api</module>
     <module>runtime</module>
     <module>schema</module>
     <module>snmp</module>
