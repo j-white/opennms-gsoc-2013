@@ -45,7 +45,7 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
             return;
         }
 
-        System.setProperty("hazelcast.logging.type", "log4j");
+        System.setProperty("hazelcast.logging.type", "slf4j");
         System.setProperty("java.net.preferIPv4Stack", "true");
     }
 
