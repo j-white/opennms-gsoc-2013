@@ -57,9 +57,9 @@ import org.springframework.util.Assert;
 public class Clusterd extends AbstractServiceDaemon implements
         LeaderSelectorListener {
     /**
-     * Daemon name.
+     * Log4j category
      */
-    private static final String DAEMON_NAME = "clusterd";
+    private final static String LOG4J_CATEGORY = "collectd";
 
     /**
      * Used to perform leader election.
@@ -104,7 +104,7 @@ public class Clusterd extends AbstractServiceDaemon implements
      * Default constructor.
      */
     public Clusterd() {
-        super(DAEMON_NAME);
+        super(LOG4J_CATEGORY);
     }
 
     /** {@inheritDoc} */
@@ -244,5 +244,14 @@ public class Clusterd extends AbstractServiceDaemon implements
      */
     public void setServiceManager(ServiceManager serviceManager) {
         m_serviceManager = serviceManager;
+    }
+
+    /**
+     * <p>
+     * getLoggingCategory
+     * </p>
+     */
+    public static String getLoggingCategory() {
+        return LOG4J_CATEGORY;
     }
 }

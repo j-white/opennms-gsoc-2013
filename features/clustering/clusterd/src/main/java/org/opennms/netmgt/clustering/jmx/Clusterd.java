@@ -41,7 +41,7 @@ public class Clusterd
     /** {@inheritDoc} */
     @Override
     protected String getLoggingPrefix() {
-        return "OpenNMS.Clusterd";
+        return org.opennms.netmgt.clustering.Clusterd.getLoggingCategory();
     }
 
     /** {@inheritDoc} */
