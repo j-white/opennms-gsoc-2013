@@ -24,7 +24,7 @@
             <Bundle-RequiredExecutionEnvironment>JavaSE-1.6</Bundle-RequiredExecutionEnvironment>
             <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
             <Bundle-Version>${project.version}</Bundle-Version>
-            <Export-Package>org.opennms.netmgt.grid.*;org.opennms.grid.utils.*;version="${project.version}"</Export-Package>
+            <Export-Package>org.opennms.netmgt.grid.*;version="${project.version}"</Export-Package>
           </instructions>
         </configuration>
       </plugin>
@@ -34,7 +34,7 @@
     <dependency>
       <groupId>com.hazelcast</groupId>
       <artifactId>hazelcast</artifactId>
-      <version>2.6</version>
+      <version>${hazelcastVersion}</version>
     </dependency>
 
     <dependency>
@@ -43,4 +43,17 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+  <repositories>
+   <repository>
+      <id>sonatype-snapshots</id>
+      <name>Sonatype Snapshot Repository</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+      <releases>
+          <enabled>false</enabled>
+      </releases>
+      <snapshots>
+          <enabled>true</enabled>
+      </snapshots>
+   </repository>
+  </repositories>
 </project>

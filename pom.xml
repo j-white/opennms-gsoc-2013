@@ -813,6 +813,7 @@
     <commonsValidatorVersion>1.3.1</commonsValidatorVersion>
     <gwtVersion>2.3.0</gwtVersion>
     <gwtPluginVersion>2.3.0-1</gwtPluginVersion>
+    <hazelcastVersion>3.0-SNAPSHOT</hazelcastVersion>
     <httpcoreVersion>4.2.4</httpcoreVersion>
     <httpclientVersion>4.2.5</httpclientVersion>
     <jasperreportsVersion>3.7.6</jasperreportsVersion>
