@@ -59,7 +59,7 @@ public class Clusterd extends AbstractServiceDaemon implements
     /**
      * Log4j category
      */
-    private final static String LOG4J_CATEGORY = "collectd";
+    private final static String LOG4J_CATEGORY = "clusterd";
 
     /**
      * Used to perform leader election.
