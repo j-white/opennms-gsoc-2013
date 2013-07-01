@@ -30,7 +30,6 @@ public class HazcelcastTopic<T> implements Topic<T> {
 
     @Override
     public void removeMessageListener(MessageListener<T> listener) {
-        m_hazelcastTopic.removeMessageListener(new HazelcastMessageListener<T>(
-                                                                               listener));
+        // TODO: FIXME
     }
 }
