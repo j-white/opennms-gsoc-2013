@@ -15,6 +15,7 @@
     <KeyValuePair key="asterisk-gateway"     value="INFO" />
     <KeyValuePair key="archiver"             value="INFO" />
     <KeyValuePair key="capsd"                value="INFO" />
+    <KeyValuePair key="clusterd"             value="DEBUG" />
     <KeyValuePair key="collectd"             value="INFO" />
     <KeyValuePair key="correlator"           value="INFO" />
     <KeyValuePair key="dhcpd"                value="INFO" />

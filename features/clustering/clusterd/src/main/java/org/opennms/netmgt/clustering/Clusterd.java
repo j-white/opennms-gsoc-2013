@@ -59,7 +59,7 @@ public class Clusterd extends AbstractServiceDaemon implements
     /**
      * Daemon name.
      */
-    private static final String DAEMON_NAME = "Clusterd";
+    private static final String DAEMON_NAME = "clusterd";
 
     /**
      * Used to perform leader election.
@@ -104,7 +104,7 @@ public class Clusterd extends AbstractServiceDaemon implements
      * Default constructor.
      */
     public Clusterd() {
-        super("OpenNMS." + DAEMON_NAME);
+        super(DAEMON_NAME);
     }
 
     /** {@inheritDoc} */
