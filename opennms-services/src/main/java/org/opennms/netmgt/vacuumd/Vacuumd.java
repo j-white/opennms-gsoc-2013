@@ -80,6 +80,8 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
 
     private volatile EventIpcManager m_eventMgr;
 
+    private volatile long m_numAutomationsRan = 0;
+
     /**
      * <p>
      * getSingleton
@@ -347,5 +349,13 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
 
     public VacuumdConfigDao getVacuumdConfig() {
         return VacuumdConfigFactory.getInstance();
+    }
+
+    public long getNumAutomationsRan() {
+        return m_numAutomationsRan;
+    }
+
+    protected void incNumAutomationsRan() {
+        m_numAutomationsRan++;
     }
 }

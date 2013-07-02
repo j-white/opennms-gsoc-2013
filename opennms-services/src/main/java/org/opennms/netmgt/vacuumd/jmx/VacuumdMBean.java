@@ -40,4 +40,5 @@ import org.opennms.netmgt.daemon.BaseOnmsMBean;
  * @version $Id: $
  */
 public interface VacuumdMBean extends BaseOnmsMBean {
+    public long getNumAutomationsRan();
 }

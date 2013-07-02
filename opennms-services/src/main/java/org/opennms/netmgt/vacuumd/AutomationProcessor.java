@@ -125,6 +125,7 @@ public class AutomationProcessor implements ClusterRunnable {
         }
 
         LOG.debug("run: Finished automation "+m_automation.getName()+", started at "+startDate);
+        Vacuumd.getSingleton().incNumAutomationsRan();
         scheduleWith(m_scheduler);
     }
 
