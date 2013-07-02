@@ -74,7 +74,8 @@ public class ClusterdTest implements InitializingBean {
 
     @Test
     public void servicesAreStartedOnElect() throws InterruptedException {
-        // Invoke the leader function immediately when started
+        // The mock leader selector invokes the leader function immediately
+        // when started
         MockLeaderSelector mockLeaderSelector = new MockLeaderSelector(
                                                                        m_clusterd);
         m_clusterd.setLeaderSelector(mockLeaderSelector);
@@ -113,6 +114,39 @@ public class ClusterdTest implements InitializingBean {
         m_clusterd.stop();
 
         // Verify the mock calls
+        EasyMock.verify(mockServiceConfigDao);
+        EasyMock.verify(mockServiceManager);
+    }
+
+    @Test
+    public void clusterShutdown() throws InterruptedException {
+        long leaderElectionDelay = 2000;
+        // Should be slightly smaller then the leaderElectionDelay
+        long lockWaitThreshold = 1500; 
+
+        // Wait the given delay
+        MockLeaderSelector mockLeaderSelector = new MockLeaderSelector(
+                                                                       m_clusterd,
+                                                                       leaderElectionDelay);
+        m_clusterd.setLeaderSelector(mockLeaderSelector);
+
+        // Expect 0 service related calls
+        ServiceConfigDao mockServiceConfigDao = EasyMock.createMock(ServiceConfigDao.class);
+        ServiceManager mockServiceManager = EasyMock.createMock(ServiceManager.class);
+        EasyMock.replay(mockServiceConfigDao, mockServiceManager);
+
+        m_clusterd.setServiceConfigDao(mockServiceConfigDao);
+        m_clusterd.setServiceManager(mockServiceManager);
+
+        m_clusterd.setLockWaitTreshold(lockWaitThreshold);
+        m_clusterd.setPreStartSleep(10 * leaderElectionDelay);
+
+        // Start the daemon and stop it immediately
+        m_clusterd.start();
+        Thread.sleep(2 * leaderElectionDelay);
+        m_clusterd.stop();
+
+        // Verify that no calls to start any services were made
         EasyMock.verify(mockServiceConfigDao);
         EasyMock.verify(mockServiceManager);
     }

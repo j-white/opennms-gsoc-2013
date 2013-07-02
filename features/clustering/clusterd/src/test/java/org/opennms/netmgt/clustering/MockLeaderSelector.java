@@ -40,8 +40,15 @@ public class MockLeaderSelector extends LeaderSelector {
      */
     private Thread m_thread = null;
 
+    private long m_msBeforeCall;
+
     public MockLeaderSelector(LeaderSelectorListener listener) {
+        this(listener, 0);
+    }
+
+    public MockLeaderSelector(LeaderSelectorListener listener, long msBeforeCall) {
         setListener(listener);
+        m_msBeforeCall = msBeforeCall;
     }
 
     public void start() {
@@ -57,6 +64,13 @@ public class MockLeaderSelector extends LeaderSelector {
 
     @Override
     public void run() {
+        if (m_msBeforeCall > 0) {
+            try {
+                Thread.sleep(m_msBeforeCall);
+            } catch(InterruptedException e) {
+                return;
+            }
+        }
         getListener().takeLeadership();
     }
 }
