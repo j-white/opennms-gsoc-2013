@@ -89,6 +89,9 @@
         <attrib name="TotalOperationsPending" alias="ONMSQueOpsPend" type="gauge"/>
         <attrib name="UpdatesCompleted" alias="ONMSQueUpdates" type="counter"/>
       </mbean>
+      <mbean name="OpenNMS Vacuumd" objectname="OpenNMS:Name=Vacuumd">
+        <attrib name="NumAutomationsRan" alias="ONMSAutomRan" type="counter"/>
+      </mbean>
       <mbean name="JVM Memory" objectname="java.lang:type=OperatingSystem">
         <attrib name="FreePhysicalMemorySize" alias="FreeMemory" type="gauge"/>
         <attrib name="TotalPhysicalMemorySize" alias="TotalMemory" type="gauge"/>
