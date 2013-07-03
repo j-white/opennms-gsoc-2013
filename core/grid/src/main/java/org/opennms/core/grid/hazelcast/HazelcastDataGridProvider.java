@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 
+import org.opennms.core.logging.Logging;
 import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.grid.Member;
 import org.opennms.core.grid.Topic;
@@ -15,11 +16,20 @@ import com.hazelcast.core.ITopic;
 
 public class HazelcastDataGridProvider implements DataGridProvider {
 
+    private static final String LOG4J_PREFIX = "hazelcast";
+
     private HazelcastInstance m_hazelcastInstance = null;
 
     private synchronized HazelcastInstance getHazelcastInstance() {
         if (m_hazelcastInstance == null) {
-            m_hazelcastInstance = Hazelcast.newHazelcastInstance();
+            @SuppressWarnings("rawtypes")
+            Map mdc = Logging.getCopyOfContextMap();
+            try {
+                Logging.putPrefix(LOG4J_PREFIX);
+                m_hazelcastInstance = Hazelcast.newHazelcastInstance();
+            } finally {
+                Logging.setContextMap(mdc);
+            }
         }
 
         return m_hazelcastInstance;
