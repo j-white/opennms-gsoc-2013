@@ -74,4 +74,30 @@ public class ScheduleTimeKeeper implements ClusterRunnable, Timer, DataGridProvi
             ((DataGridProviderAware) m_runnable).setDataGridProvider(dataGridProvider);
         }
     }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result
+                + ((m_runnable == null) ? 0 : m_runnable.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        ScheduleTimeKeeper other = (ScheduleTimeKeeper) obj;
+        if (m_runnable == null) {
+            if (other.m_runnable != null)
+                return false;
+        } else if (!m_runnable.equals(other.m_runnable))
+            return false;
+        return true;
+    }
 }

@@ -87,6 +87,34 @@ public class DistributedSchedulerTest {
     }
 
     @Test
+    public void noDuplicateTasks() throws Exception {
+        // Create a new distributed scheduler
+        DistributedScheduler distributedScheduler = newDistributedScheduler();
+
+        // Create a new task
+        MyRunnable runnable = new MyRunnable(DEFAULT_TASK_KEY);
+
+        // Verify that no tasks are scheduled
+        assertEquals(0, distributedScheduler.getNumTasksScheduled());
+        
+        // Schedule the same task multiple times with the same interval
+        distributedScheduler.schedule(1000, runnable);
+        distributedScheduler.schedule(1000, runnable);
+        distributedScheduler.schedule(1000, runnable);
+        
+        // There should only be one present
+        assertEquals(1, distributedScheduler.getNumTasksScheduled());
+        
+        // Now schedule that same task multiple times on a different interval
+        distributedScheduler.schedule(1001, runnable);
+        distributedScheduler.schedule(1001, runnable);
+        distributedScheduler.schedule(1001, runnable);
+
+        // There should only be two tasks present now
+        assertEquals(2, distributedScheduler.getNumTasksScheduled());
+    }
+
+    @Test
     public void scheduleWithOneScheduler() throws Exception {
         // Create a new distributed scheduler
         DistributedScheduler distributedSchedulers[] = new DistributedScheduler[] { newDistributedScheduler() };
@@ -195,7 +223,7 @@ public class DistributedSchedulerTest {
 
         // Verify that no tasks are scheduled on any of the schedulers
         for (int i = 0; i < distributedSchedulers.length; i++) {
-            assertEquals(0, distributedSchedulers[i].getScheduled());
+            assertEquals(0, distributedSchedulers[i].getNumTasksScheduled());
         }
 
         // Schedule the task on scheduler X
@@ -204,7 +232,7 @@ public class DistributedSchedulerTest {
 
         // Verify that the task is scheduled on all of the schedulers
         for (int i = 0; i < distributedSchedulers.length; i++) {
-            assertEquals(1, distributedSchedulers[i].getScheduled());
+            assertEquals(1, distributedSchedulers[i].getNumTasksScheduled());
         }
 
         // Make sure the task has not been executed
@@ -288,11 +316,6 @@ public class DistributedSchedulerTest {
         }
 
         @Override
-        public boolean isReady() {
-            return true;
-        }
-
-        @Override
         public void setScheduler(
                 Scheduler scheduler) {
             m_scheduler = scheduler;
@@ -301,6 +324,33 @@ public class DistributedSchedulerTest {
         @Override
         public void setDataGridProvider(DataGridProvider dataGridProvider) {
             m_dataGridProvider = dataGridProvider;
+        }
+
+        @Override
+        public boolean isReady() {
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + m_key;
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            MyRunnable other = (MyRunnable) obj;
+            if (other.m_key != m_key)
+                return false;
+            return true;
         }
     }
 

@@ -139,6 +139,10 @@ public class DistributedScheduler implements Runnable, PausableFiber,
         public T peek() throws InterruptedException {
             return m_delegate.peek();
         }
+
+        public boolean contains(T o) {
+            return m_delegate.contains(o);
+        }
     }
 
     public DistributedScheduler(String name, int maxSize) {
@@ -179,7 +183,7 @@ public class DistributedScheduler implements Runnable, PausableFiber,
     private void schedule(ReadyRunnable runnable, long interval) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("schedule: Adding ready runnable " + runnable
-                                + " at interval " + interval);
+                    + " at interval " + interval);
         }
 
         m_lock.lock();
@@ -193,6 +197,11 @@ public class DistributedScheduler implements Runnable, PausableFiber,
                 queue = new PeekableFifoQueue<ReadyRunnable>();
             }
 
+            if (queue.contains(runnable)) {
+                LOG.debug("schedule: element already present in queue");
+                return;
+            }
+
             try {
                 queue.add(runnable);
                 m_queues.put(key, queue);
@@ -200,7 +209,7 @@ public class DistributedScheduler implements Runnable, PausableFiber,
                 LOG.debug("schedule: queue element added, notification performed");
             } catch (InterruptedException e) {
                 LOG.info("schedule: failed to add new ready runnable instance "
-                                   + runnable + " to scheduler: " + e, e);
+                                 + runnable + " to scheduler: " + e, e);
                 Thread.currentThread().interrupt();
             }
         } finally {
@@ -324,16 +333,16 @@ public class DistributedScheduler implements Runnable, PausableFiber,
     }
 
     /**
-     * Returns total number of elements currently scheduled.
+     * Returns total number of tasks currently scheduled.
      * 
-     * @return the sum of all the elements in the various queues
+     * @return the sum of all the tasks in the various queues
      */
-    public int getScheduled() {
-        int numElementsScheduled = 0;
+    public int getNumTasksScheduled() {
+        int numTasksScheduled = 0;
         for (PeekableFifoQueue<ReadyRunnable> queue : m_queues.values()) {
-            numElementsScheduled += queue.size();
+            numTasksScheduled += queue.size();
         }
-        return numElementsScheduled;
+        return numTasksScheduled;
     }
 
     /**
@@ -382,7 +391,7 @@ public class DistributedScheduler implements Runnable, PausableFiber,
                         && m_status != RESUME_PENDING) {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("run: status = " + m_status
-                                            + ", time to exit");
+                                + ", time to exit");
                     }
                     break;
                 }
@@ -409,7 +418,7 @@ public class DistributedScheduler implements Runnable, PausableFiber,
                     m_status = RUNNING;
                 }
 
-                if (getScheduled() == 0) {
+                if (getNumTasksScheduled() == 0) {
                     try {
                         LOG.debug("run: no ready runnables scheduled, waiting...");
                         wait();
@@ -453,7 +462,7 @@ public class DistributedScheduler implements Runnable, PausableFiber,
                                 if (readyRun.isReady()) {
                                     if (LOG.isDebugEnabled()) {
                                         LOG.debug("run: found ready runnable "
-                                                            + readyRun);
+                                                + readyRun);
                                     }
 
                                     /*

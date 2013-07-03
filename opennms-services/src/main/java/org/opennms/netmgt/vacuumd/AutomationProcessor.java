@@ -303,6 +303,32 @@ public class AutomationProcessor implements ClusterRunnable {
         scheduler.schedule(m_automation.getInterval(), this);
     }
 
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result
+                + ((m_automation == null) ? 0 : m_automation.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        AutomationProcessor other = (AutomationProcessor) obj;
+        if (m_automation == null) {
+            if (other.m_automation != null)
+                return false;
+        } else if (!m_automation.equals(other.m_automation))
+            return false;
+        return true;
+    }
+
     private void readObject(java.io.ObjectInputStream stream)
             throws java.io.IOException, ClassNotFoundException
     {
