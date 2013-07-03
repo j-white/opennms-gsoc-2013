@@ -83,7 +83,7 @@ public class DistributedSchedulerTest {
 
     @After
     public void tearDown() {
-        MockLogAppender.assertNoWarningsOrGreater();
+        MockLogAppender.assertNoErrorOrGreater();
     }
 
     @Test
