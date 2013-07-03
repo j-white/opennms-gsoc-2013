@@ -107,7 +107,7 @@ public class DistributedScheduler implements Runnable, PausableFiber,
     /**
      * Logger.
      */
-    private static final Logger LOG = LoggerFactory.getLogger(LegacyScheduler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DistributedScheduler.class);
 
     public DataGridProvider getDataGridProvider() {
         return m_dataGridProvider;
