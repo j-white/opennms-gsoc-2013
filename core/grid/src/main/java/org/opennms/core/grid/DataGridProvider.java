@@ -2,6 +2,7 @@ package org.opennms.core.grid;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.Lock;
 
 public interface DataGridProvider {
@@ -23,6 +24,8 @@ public interface DataGridProvider {
      */
     <K, V> Map<K, V> getMap(String name);
 
+
+    <T> BlockingQueue<T> getQueue(String name);
 
     String getName();
 

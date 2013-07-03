@@ -3,6 +3,7 @@ package org.opennms.core.grid.hazelcast;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.Lock;
 
 import org.opennms.core.logging.Logging;
@@ -51,6 +52,12 @@ public class HazelcastDataGridProvider implements DataGridProvider {
     @Override
     public <K, V> Map<K, V> getMap(String name) {
         return getHazelcastInstance().getMap(name);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public <T> BlockingQueue<T> getQueue(String name) {
+        return getHazelcastInstance().getQueue(name);
     }
 
     /** {@inheritDoc} */
