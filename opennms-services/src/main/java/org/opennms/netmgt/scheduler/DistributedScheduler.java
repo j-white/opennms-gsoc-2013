@@ -375,7 +375,7 @@ public class DistributedScheduler implements PausableFiber,
 
         @Override
         public void run() {
-            synchronized (this) {
+            synchronized (DistributedScheduler.this) {
                 m_status = RUNNING;
             }
 
@@ -385,7 +385,7 @@ public class DistributedScheduler implements PausableFiber,
             // interrupted.
             for (;;) {
                 // Verify and maintain the fiber state
-                synchronized (this) {
+                synchronized (DistributedScheduler.this) {
                     if (m_status != RUNNING && m_status != PAUSED
                             && m_status != PAUSE_PENDING
                             && m_status != RESUME_PENDING) {
@@ -470,7 +470,7 @@ public class DistributedScheduler implements PausableFiber,
             }
 
             LOG.debug("run: scheduler exiting, state = STOPPED");
-            synchronized (this) {
+            synchronized (DistributedScheduler.this) {
                 m_status = STOPPED;
             }
         }
@@ -490,13 +490,13 @@ public class DistributedScheduler implements PausableFiber,
 
         @Override
         public void run() {
-            synchronized (this) {
+            synchronized (DistributedScheduler.this) {
                 m_status = RUNNING;
             }
 
             for(;;) {
                 // Verify and maintain the fiber state
-                synchronized (this) {
+                synchronized (DistributedScheduler.this) {
                     if (m_status != RUNNING && m_status != PAUSED
                             && m_status != PAUSE_PENDING
                             && m_status != RESUME_PENDING) {
