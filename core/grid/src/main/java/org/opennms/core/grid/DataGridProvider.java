@@ -27,8 +27,9 @@ public interface DataGridProvider {
 
     <T> BlockingQueue<T> getQueue(String name);
 
-    String getName();
+    <T> Set<T> getSet(String name);
 
+    String getName();
 
     public Set<Member> getClusterMembers();
 

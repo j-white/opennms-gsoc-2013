@@ -62,6 +62,12 @@ public class HazelcastDataGridProvider implements DataGridProvider {
 
     /** {@inheritDoc} */
     @Override
+    public <T> Set<T> getSet(String name) {
+        return getHazelcastInstance().getSet(name);
+    }
+
+    /** {@inheritDoc} */
+    @Override
     public <T> Topic<T> getTopic(String name) {
         ITopic<T> topic = getHazelcastInstance().getTopic(name);
         return new HazcelcastTopic<T>(topic);
