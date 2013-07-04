@@ -113,6 +113,6 @@ public class ScheduleTimeKeeper implements ClusterRunnable, Timer, DataGridProvi
 
     @Override
     public int compareTo(ScheduleTimeKeeper o) {
-        return Long.compare(o.m_timeToRun, m_timeToRun);
+        return Long.valueOf(o.m_timeToRun).compareTo(m_timeToRun);
     }
 }
