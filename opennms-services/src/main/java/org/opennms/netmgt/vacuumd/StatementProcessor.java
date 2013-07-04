@@ -100,6 +100,35 @@ public class StatementProcessor implements ClusterRunnable {
     }
 
     public String toString() {
-        return "SchedulerAware!";
+        return "SchedulerAware";
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + m_period;
+        result = prime * result
+                + ((m_statement == null) ? 0 : m_statement.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        StatementProcessor other = (StatementProcessor) obj;
+        if (m_period != other.m_period)
+            return false;
+        if (m_statement == null) {
+            if (other.m_statement != null)
+                return false;
+        } else if (!m_statement.equals(other.m_statement))
+            return false;
+        return true;
     }
 }
