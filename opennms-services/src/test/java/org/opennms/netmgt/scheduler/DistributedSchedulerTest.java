@@ -33,6 +33,7 @@ import static org.hamcrest.Matchers.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.Callable;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertEquals;
@@ -47,6 +48,7 @@ import org.opennms.core.fiber.Fiber;
 import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.grid.DataGridProviderFactory;
 import org.opennms.core.test.MockLogAppender;
+import org.opennms.core.test.MockLogger;
 import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
 import org.opennms.core.test.grid.annotations.JUnitGrid;
 import org.opennms.netmgt.scheduler.ClusterRunnable;
@@ -75,7 +77,9 @@ public class DistributedSchedulerTest {
 
     @Before
     public void setUp() {
-        MockLogAppender.setupLogging(true, "DEBUG");
+        Properties loggingProperties = new Properties();
+        loggingProperties.put(MockLogger.LOG_KEY_PREFIX + "com.hazelcast", "ERROR");
+        MockLogAppender.setupLogging(true, "DEBUG", loggingProperties);
 
         // Remove any existing values from the map
         MySingletonMap.getInstance().clearMap();
@@ -87,7 +91,7 @@ public class DistributedSchedulerTest {
     }
 
     @Test
-    public void noDuplicateTasks() throws Exception {
+    public void noDuplicateTasksQueued() throws Exception {
         // Create a new distributed scheduler
         DistributedScheduler distributedScheduler = newDistributedScheduler();
 
@@ -98,20 +102,61 @@ public class DistributedSchedulerTest {
         assertEquals(0, distributedScheduler.getNumTasksScheduled());
         
         // Schedule the same task multiple times with the same interval
-        distributedScheduler.schedule(1000, runnable);
-        distributedScheduler.schedule(1000, runnable);
-        distributedScheduler.schedule(1000, runnable);
+        distributedScheduler.schedule(DEFAULT_SCHEDULE_INTERVAL_MS, runnable);
+        distributedScheduler.schedule(DEFAULT_SCHEDULE_INTERVAL_MS, runnable);
+        distributedScheduler.schedule(DEFAULT_SCHEDULE_INTERVAL_MS, runnable);
         
         // There should only be one present
         assertEquals(1, distributedScheduler.getNumTasksScheduled());
         
         // Now schedule that same task multiple times on a different interval
-        distributedScheduler.schedule(1001, runnable);
-        distributedScheduler.schedule(1001, runnable);
-        distributedScheduler.schedule(1001, runnable);
+        distributedScheduler.schedule(DEFAULT_SCHEDULE_INTERVAL_MS+1, runnable);
+        distributedScheduler.schedule(DEFAULT_SCHEDULE_INTERVAL_MS+1, runnable);
+        distributedScheduler.schedule(DEFAULT_SCHEDULE_INTERVAL_MS+1, runnable);
 
-        // There should only be two tasks present now
-        assertEquals(2, distributedScheduler.getNumTasksScheduled());
+        // There should still only be a single task present
+        assertEquals(1, distributedScheduler.getNumTasksScheduled());
+    }
+
+    @Test
+    public void noDuplicateTasksRunningOrQueued() throws Exception {
+        // Create a new distributed scheduler
+        DistributedScheduler distributedScheduler = newDistributedScheduler();
+
+        // Create a new task
+        MyRunnable runnable = new MyRunnable(DEFAULT_TASK_KEY);
+        runnable.setMsToSleepWhenRan(DEFAULT_SCHEDULE_INTERVAL_MS * 4);
+
+        // Verify that no tasks are scheduled
+        assertEquals(0, distributedScheduler.getNumTasksScheduled());
+
+        // Schedule the same task twice the same interval
+        distributedScheduler.schedule(DEFAULT_SCHEDULE_INTERVAL_MS, runnable);
+        distributedScheduler.schedule(DEFAULT_SCHEDULE_INTERVAL_MS, runnable);
+
+        // There should only be one present
+        assertEquals(1, distributedScheduler.getNumTasksScheduled());
+
+        // Start the scheduler
+        distributedScheduler.start();
+        
+        // Wait until the task is executed
+        await().atMost(DEFAULT_SCHEDULE_INTERVAL_MS * 200, MILLISECONDS).until(getValueFor(DEFAULT_TASK_KEY),
+                                                                                is(1));
+        // The task should be sleeping now: no longer present in the queue, but still in a "executing" state
+        
+        // No tasks should be queued
+        assertEquals(0, distributedScheduler.getNumTasksScheduled());
+        
+        // Try to schedule the same task that is already executing
+        distributedScheduler.schedule(DEFAULT_SCHEDULE_INTERVAL_MS, runnable);
+
+        // The task should not be queued
+        assertEquals(0, distributedScheduler.getNumTasksScheduled());
+
+        // Stop the scheduler and block until it's fully stopped
+        distributedScheduler.stop();
+        await().until(isStopped(distributedScheduler));
     }
 
     @Test
@@ -163,7 +208,9 @@ public class DistributedSchedulerTest {
         // interval
         int k = 0;
         final int NUM_TASKS = 100;
-        final int NUM_RESCHEDULES = 10;
+        final int RESCHEDULE_MULTIPLE = 3;
+        final int NUM_RESCHEDULES = NUM_CONCURRENT_SCHEDULERS * RESCHEDULE_MULTIPLE;
+        final int TOTAL_NUM_TASKS_TO_RUN = NUM_TASKS * NUM_RESCHEDULES;
         for (int i = 1; i <= NUM_TASKS; i++) {
             assertEquals(Integer.valueOf(0), getValueFor(i).call());
             //System.out.println(String.format("Scheduling task with key %d on %s",
@@ -176,10 +223,10 @@ public class DistributedSchedulerTest {
             k = (k + 1) % NUM_CONCURRENT_SCHEDULERS;
         }
 
-        // Wait until the last task has run through at all its iterations
+        // Wait until all of the tasks have been executed
         await().atMost(NUM_RESCHEDULES * DEFAULT_SCHEDULE_INTERVAL_MS * 2,
-                       MILLISECONDS).until(getValueFor(NUM_TASKS),
-                                           is(NUM_RESCHEDULES));
+                       MILLISECONDS).until(getSumOfValues(1, NUM_TASKS),
+                                           is(TOTAL_NUM_TASKS_TO_RUN));
 
         // Stop the schedulers
         for (DistributedScheduler distributedScheduler : distributedSchedulers) {
@@ -189,16 +236,18 @@ public class DistributedSchedulerTest {
 
         // Display the distribution statistics
         double minPercentageOfTasksRanOnAnyMember = Double.MAX_VALUE;
+        int totalNumTasksRan = 0;
         for (DataGridProvider dataGridProvider : dataGridProviders) {
             String gridProviderName = dataGridProvider.getName();
-            int totalNumTasksRan = NUM_TASKS * NUM_RESCHEDULES;
+            
             int numTasksRanOnMember = MySingletonMap.getInstance().getValueAt(gridProviderName);
             double percentageOfTasksRanOnMember = 100 * numTasksRanOnMember
-                    / (double) totalNumTasksRan;
+                    / (double) TOTAL_NUM_TASKS_TO_RUN;
+            totalNumTasksRan += numTasksRanOnMember;
 
             System.out.println(String.format("%d/%d or %.2f%% of the tasks were executed on %s",
                                              numTasksRanOnMember,
-                                             totalNumTasksRan,
+                                             TOTAL_NUM_TASKS_TO_RUN,
                                              percentageOfTasksRanOnMember,
                                              gridProviderName));
 
@@ -207,9 +256,11 @@ public class DistributedSchedulerTest {
             }
         }
 
-        // TODO: Looks a ways to improve the spread
-        // Require at least a 15% spread
-        assertTrue(minPercentageOfTasksRanOnAnyMember > 15);
+        // Verify that the number of tasks ran matches the expected value
+        assertEquals(TOTAL_NUM_TASKS_TO_RUN, totalNumTasksRan);
+
+        // Require at least a 32% spread
+        assertTrue(minPercentageOfTasksRanOnAnyMember > 32);
     }
 
     private void scheduleOnXAndRunOnY(
@@ -242,7 +293,7 @@ public class DistributedSchedulerTest {
         distributedSchedulers[y].start();
 
         // Verify that the task gets executed
-        await().atMost(DEFAULT_SCHEDULE_INTERVAL_MS * 2000, MILLISECONDS).until(getValueFor(DEFAULT_TASK_KEY),
+        await().atMost(DEFAULT_SCHEDULE_INTERVAL_MS * 2, MILLISECONDS).until(getValueFor(DEFAULT_TASK_KEY),
                                                                              is(1));
 
         // Stop scheduler Y and block until it's fully stopped
@@ -269,6 +320,17 @@ public class DistributedSchedulerTest {
     }
 
     /**
+     * Retrieves the sum of all values between the given keys.
+     */
+    private Callable<Integer> getSumOfValues(final int from, final int to) {
+        return new Callable<Integer>() {
+            public Integer call() {
+                return MySingletonMap.getInstance().getSumOfValues(from, to);
+            }
+        };
+    }
+    
+    /**
      * Checks if a fiber is stopped.
      */
     private Callable<Boolean> isStopped(final Fiber fiber) {
@@ -287,6 +349,7 @@ public class DistributedSchedulerTest {
         private int m_key;
         private int m_numReschedules;
         private long m_interval;
+        private long m_msToSleepWhenRan = 0;
         private transient DataGridProvider m_dataGridProvider;
         private transient Scheduler m_scheduler;
 
@@ -300,17 +363,27 @@ public class DistributedSchedulerTest {
             m_interval = interval;
         }
 
+        public void setMsToSleepWhenRan(long milliseconds) {
+            m_msToSleepWhenRan = milliseconds;
+        }
+
         @Override
         public void run() {
             assertNotNull(m_dataGridProvider);
-            //System.out.println("Running task with key " + m_key + " on "
-            //        + m_dataGridProvider.getName());
 
             MySingletonMap.getInstance().incValueAt(m_key);
             MySingletonMap.getInstance().incValueAt(m_dataGridProvider.getName());
 
+            if (m_msToSleepWhenRan > 0) {
+                try {
+                    Thread.sleep(m_msToSleepWhenRan);
+                } catch (InterruptedException e) {
+                    return;
+                }
+            }
+
             if (m_numReschedules > 0) {
-                m_scheduler.schedule(m_interval, this);
+                m_scheduler.schedule(m_interval, this, true);
                 m_numReschedules--;
             }
         }
@@ -394,6 +467,14 @@ public class DistributedSchedulerTest {
             return val;
         }
 
+        public int getSumOfValues(int from, int to) {
+            int sumOfValues = 0;
+            for (int i = from; i <= to; i++) {
+                sumOfValues += getValueAt(i);
+            }
+            return sumOfValues;
+        }
+ 
         public void clearMap() {
             m_map.clear();
         }

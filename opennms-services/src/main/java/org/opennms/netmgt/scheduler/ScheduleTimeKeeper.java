@@ -28,16 +28,23 @@
 
 package org.opennms.netmgt.scheduler;
 
+import java.util.Set;
+
 import org.opennms.core.grid.DataGridProvider;
 
-public class ScheduleTimeKeeper implements ClusterRunnable, Timer, DataGridProviderAware {
+public class ScheduleTimeKeeper implements ClusterRunnable, Timer, DataGridProviderAware, Comparable<ScheduleTimeKeeper> {
     private static final long serialVersionUID = 1073282881016278947L;
     private final long m_timeToRun;
     private final ReadyRunnable m_runnable;
+    private transient Set<ReadyRunnable> m_executingSet = null;
 
     public ScheduleTimeKeeper(final ReadyRunnable runnable, final long timeToRun) {
         m_runnable = runnable;
         m_timeToRun = timeToRun;
+    }
+
+    public void removeFromSetAfterRun(final Set<ReadyRunnable> executingSet) {
+        m_executingSet = executingSet;
     }
 
     @Override
@@ -48,6 +55,9 @@ public class ScheduleTimeKeeper implements ClusterRunnable, Timer, DataGridProvi
     @Override
     public void run() {
         m_runnable.run();
+        if (m_executingSet != null) {
+            m_executingSet.remove(this);
+        }
     }
 
     @Override
@@ -99,5 +109,10 @@ public class ScheduleTimeKeeper implements ClusterRunnable, Timer, DataGridProvi
         } else if (!m_runnable.equals(other.m_runnable))
             return false;
         return true;
+    }
+
+    @Override
+    public int compareTo(ScheduleTimeKeeper o) {
+        return Long.compare(o.m_timeToRun, m_timeToRun);
     }
 }

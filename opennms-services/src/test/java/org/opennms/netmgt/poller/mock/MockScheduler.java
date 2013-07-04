@@ -56,9 +56,9 @@ public class MockScheduler implements Scheduler {
         m_timer = timer;
     }
 
-    
     @Override
-    public void schedule(long interval, ReadyRunnable schedule) {
+    public void schedule(long interval, ReadyRunnable schedule,
+            boolean isReschedule) {
         Long nextTime = Long.valueOf(getCurrentTime()+interval);
         //MockUtil.println("Scheduled "+schedule+" for "+nextTime);
         List<ReadyRunnable> entries = m_scheduleEntries.get(nextTime);
@@ -68,6 +68,12 @@ public class MockScheduler implements Scheduler {
         }
             
         entries.add(schedule);
+    }
+    
+    
+    @Override
+    public void schedule(long interval, ReadyRunnable schedule) {
+        schedule(interval, schedule, false); 
     }
     
     public int getEntryCount() {
@@ -144,5 +150,5 @@ public class MockScheduler implements Scheduler {
 	public int getStatus() {
 		return 0;
 	}
-    
+
 }

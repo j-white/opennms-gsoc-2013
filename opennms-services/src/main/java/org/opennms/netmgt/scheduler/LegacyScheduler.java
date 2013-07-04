@@ -203,10 +203,16 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
     @Override
     public synchronized void schedule(long interval,
             final ReadyRunnable runnable) {
+        schedule(interval, runnable, false);
+    }
+
+    @Override
+    public synchronized void schedule(long interval, ReadyRunnable runnable,
+            boolean isReschedule) {
         final long timeToRun = getCurrentTime() + interval;
         schedule(new ScheduleTimeKeeper(runnable, timeToRun), interval);
     }
-
+    
     /*
      * (non-Javadoc)
      * 
