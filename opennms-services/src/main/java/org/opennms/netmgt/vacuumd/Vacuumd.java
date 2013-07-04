@@ -203,7 +203,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     private void scheduleAutomation(Automation auto) {
         if (auto.getActive()) {
             AutomationProcessor ap = new AutomationProcessor(auto);
-            ap.scheduleWith(m_scheduler);
+            ap.scheduleWith(m_scheduler, false);
         }
     }
 
@@ -216,7 +216,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
 
     private void scheduleStatement(Statement statement, int period) {
         StatementProcessor sp = new StatementProcessor(statement, period);
-        sp.scheduleWith(m_scheduler);
+        sp.scheduleWith(m_scheduler, false);
     }
 
     /**

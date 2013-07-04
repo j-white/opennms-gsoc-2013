@@ -75,7 +75,7 @@ public class StatementProcessor implements ClusterRunnable {
     @Override
     public void run() {
         runUpdate(m_statement.getContent(), m_statement.getTransactional());
-        schedule();
+        scheduleWith(m_scheduler, true);
     }
 
     @Override
@@ -83,12 +83,8 @@ public class StatementProcessor implements ClusterRunnable {
         return true;
     }
 
-    private void schedule() {
-        scheduleWith(m_scheduler);
-    }
-
-    public void scheduleWith(Scheduler scheduler) {
-        scheduler.schedule(m_period, this);
+    public void scheduleWith(Scheduler scheduler, boolean isReschedule) {
+        scheduler.schedule(m_period, this, isReschedule);
     }
 
     public void setScheduler(Scheduler scheduler) {

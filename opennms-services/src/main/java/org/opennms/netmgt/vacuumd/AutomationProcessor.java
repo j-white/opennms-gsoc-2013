@@ -126,7 +126,7 @@ public class AutomationProcessor implements ClusterRunnable {
 
         LOG.debug("run: Finished automation "+m_automation.getName()+", started at "+startDate);
         Vacuumd.getSingleton().incNumAutomationsRan();
-        scheduleWith(m_scheduler);
+        scheduleWith(m_scheduler, true);
     }
 
     /**
@@ -299,8 +299,8 @@ public class AutomationProcessor implements ClusterRunnable {
         m_scheduler = scheduler;
     }
 
-    public void scheduleWith(Scheduler scheduler) {
-        scheduler.schedule(m_automation.getInterval(), this);
+    public void scheduleWith(Scheduler scheduler, boolean isReschedule) {
+        scheduler.schedule(m_automation.getInterval(), this, isReschedule);
     }
 
     @Override
