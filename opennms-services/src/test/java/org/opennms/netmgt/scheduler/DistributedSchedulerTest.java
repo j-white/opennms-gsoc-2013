@@ -216,10 +216,10 @@ public class DistributedSchedulerTest {
             //System.out.println(String.format("Scheduling task with key %d on %s",
             //                                 i,
             //                                 dataGridProviders[k].getName()));
-            distributedSchedulers[k].schedule(DEFAULT_SCHEDULE_INTERVAL_MS,
-                                              new MyRunnable(i,
-                                                             NUM_RESCHEDULES,
-                                                             DEFAULT_SCHEDULE_INTERVAL_MS));
+            MyRunnable myRunnable = new MyRunnable(i,
+                                                   NUM_RESCHEDULES,
+                                                   DEFAULT_SCHEDULE_INTERVAL_MS);
+            distributedSchedulers[k].schedule(DEFAULT_SCHEDULE_INTERVAL_MS, myRunnable);
             k = (k + 1) % NUM_CONCURRENT_SCHEDULERS;
         }
 
