@@ -237,7 +237,7 @@ public class DistributedScheduler implements PausableFiber,
                                                 new LogPreservingThreadFactory(
                                                                                getClass().getSimpleName(),
                                                                                m_maxNumberOfThreadsInPool,
-                                                                               false));
+                                                                               true));
         m_workerThread = new WorkerThread();
         m_workerThread.start();
         m_consumerThread = new ConsumerThread();
