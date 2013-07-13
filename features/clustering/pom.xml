@@ -15,5 +15,6 @@
   </description>
   <modules>
     <module>clusterd</module>
+    <module>eventd</module>
   </modules>
 </project>
