@@ -9,6 +9,7 @@ import java.util.concurrent.locks.Lock;
 import org.opennms.core.logging.Logging;
 import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.grid.Member;
+import org.opennms.core.grid.MembershipListener;
 import org.opennms.core.grid.Topic;
 
 import com.hazelcast.core.Hazelcast;
@@ -40,6 +41,12 @@ public class HazelcastDataGridProvider implements DataGridProvider {
     @Override
     public void init() {
         getHazelcastInstance();
+    }
+
+
+    @Override
+    public void shutdown() {
+        //TODO
     }
 
     /** {@inheritDoc} */
@@ -91,5 +98,15 @@ public class HazelcastDataGridProvider implements DataGridProvider {
 
     public String toString() {
         return "Hazelcast Data Grid Provider";
+    }
+
+    @Override
+    public void addMembershipListener(MembershipListener listener) {
+        getHazelcastInstance().getCluster().addMembershipListener(new HazelcastMembershipListener(listener));
+    }
+
+    @Override
+    public void removeMembershipListener(String registrationId) {
+        getHazelcastInstance().getCluster().removeMembershipListener(registrationId);
     }
 }

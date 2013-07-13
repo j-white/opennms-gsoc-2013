@@ -14,6 +14,8 @@ public interface DataGridProvider {
      */
     public void init();
 
+    public void shutdown();
+
     /**
      * GOTCHAS: synchronized() doesn't work with these locks. you must use lock.lock() instead.
      */
@@ -35,4 +37,9 @@ public interface DataGridProvider {
 
 
     <T> Topic<T> getTopic(String name);
+    
+    
+    public void addMembershipListener(MembershipListener listener);
+
+    public void removeMembershipListener(String registrationId);
 }
