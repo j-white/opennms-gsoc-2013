@@ -53,8 +53,8 @@ import org.opennms.netmgt.config.vacuumd.Trigger;
 import org.opennms.netmgt.config.vacuumd.Triggers;
 import org.opennms.netmgt.config.vacuumd.Uei;
 import org.opennms.netmgt.config.vacuumd.VacuumdConfiguration;
-import org.opennms.netmgt.eventd.mock.EventAnticipator;
-import org.opennms.netmgt.eventd.mock.MockEventIpcManager;
+import org.opennms.netmgt.dao.mock.EventAnticipator;
+import org.opennms.netmgt.dao.mock.MockEventIpcManager;
 import org.opennms.netmgt.model.events.EventBuilder;
 import org.opennms.test.mock.EasyMockUtils;
 
