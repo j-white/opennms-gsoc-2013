@@ -49,7 +49,13 @@ public class CamelEventBroadcaster implements EventProcessor,
             LOG.debug("process: skip sending event {} broadcast because it is marked as local",
                       event.getUei());
         } else {
-            LOG.debug("process: sending event {}", event);
+            if (!"donotpersist".equals(event.getLogmsg().getDest())) {
+                LOG.debug("{}: uei '{}' marked as '{}'; changing to 'donotpersist' before broadcasting",
+                          event.getUei(), event.getLogmsg().getDest());
+                event.getLogmsg().setDest("donotpersist");
+            }
+
+            LOG.debug("process: broadcasting event {}", event);
             m_producer.sendBody("direct:event", event);
         }
     }
