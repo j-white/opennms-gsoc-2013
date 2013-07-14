@@ -1,4 +1,4 @@
-package org.opennms.netmgt.eventd.processor;
+package org.opennms.netmgt.eventd.camel;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.ProducerTemplate;

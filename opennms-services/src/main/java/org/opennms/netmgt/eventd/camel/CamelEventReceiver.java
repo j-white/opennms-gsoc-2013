@@ -1,4 +1,4 @@
-package org.opennms.netmgt.eventd.adaptors;
+package org.opennms.netmgt.eventd.camel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,6 +6,8 @@ import java.util.List;
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
+import org.opennms.netmgt.eventd.adaptors.EventHandler;
+import org.opennms.netmgt.eventd.adaptors.EventReceiver;
 import org.opennms.netmgt.xml.event.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -132,5 +134,23 @@ public class CamelEventReceiver implements EventReceiver {
             LOG.debug("Removing event handler {}", handler);
             m_eventHandlers.remove(handler);
         }
+    }
+
+    /**
+     * <p>getEventHandlers</p>
+     *
+     * @return a {@link java.util.List} object.
+     */
+    public List<EventHandler> getEventHandlers() {
+        return m_eventHandlers;
+    }
+
+    /**
+     * <p>setEventHandlers</p>
+     *
+     * @param eventHandlers a {@link java.util.List} object.
+     */
+    public void setEventHandlers(List<EventHandler> eventHandlers) {
+        m_eventHandlers = eventHandlers;
     }
 }
