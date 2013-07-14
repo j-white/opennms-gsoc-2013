@@ -420,11 +420,6 @@
       <artifactId>org.opennms.core.test-api.grid</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.opennms</groupId>
-      <artifactId>opennms-dao-mock</artifactId>
-      <scope>test</scope>
-    </dependency>
 	<dependency>
 		<groupId>org.apache.camel</groupId>
 		<artifactId>camel-core</artifactId>
@@ -440,6 +435,18 @@
 		<groupId>org.apache.camel</groupId>
 		<artifactId>camel-netty</artifactId>
 		<version>2.11.0</version>
+		<exclusions>
+	        <exclusion>
+	          <groupId>com.sun.xml.bind</groupId>
+	          <artifactId>jaxb-impl</artifactId>
+	        </exclusion>
+		</exclusions>
+	</dependency>
+	<dependency>
+		<groupId>org.apache.camel</groupId>
+		<artifactId>camel-test</artifactId>
+		<version>2.11.0</version>
+		<scope>test</scope>
 		<exclusions>
 	        <exclusion>
 	          <groupId>com.sun.xml.bind</groupId>

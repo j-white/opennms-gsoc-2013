@@ -270,6 +270,18 @@ public class Event implements Serializable {
 	 */
 	@XmlElement(name = "alarm-data")
 	private AlarmData _alarmData;
+	
+
+	@XmlAttribute(name="local", required=false)
+	private Boolean m_local;
+
+	public void setLocal(boolean local) {
+	    m_local = local;
+	}
+
+	public boolean getLocal() {
+	    return m_local == null ? false : m_local;
+	}
 
 	// ----------------/
 	// - Constructors -/

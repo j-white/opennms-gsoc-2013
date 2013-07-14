@@ -43,7 +43,10 @@ public class CamelEventBroadcaster implements EventProcessor,
     public void process(Header eventHeader, Event event) {
         if (event.getLogmsg() != null
                 && event.getLogmsg().getDest().equals("suppress")) {
-            LOG.debug("process: skip sending event {} to other daemons because is marked as suppress",
+            LOG.debug("process: skip sending event {} broadcast because it is marked as suppress",
+                      event.getUei());
+        } else if (event.getLocal()) {
+            LOG.debug("process: skip sending event {} broadcast because it is marked as local",
                       event.getUei());
         } else {
             LOG.debug("process: sending event {}", event);

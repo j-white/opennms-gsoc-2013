@@ -29,15 +29,14 @@ public class CamelEventReceiver implements EventReceiver {
     /**
      * Output.
      */
-    private static final String ROUTE_ENDPOINT_URI = "bean:camelEventReceiver?method=onEventReceived";
+    private static final String ROUTE_ENDPOINT_URI = "bean:camelReceiver?method=onEventReceived";
 
     /**
      * The fiber's status.
      */
     private volatile int m_status;
 
-    @Override
-    public void init() {
+    public CamelEventReceiver() {
         m_status = START_PENDING;
 
         try {
@@ -52,6 +51,11 @@ public class CamelEventReceiver implements EventReceiver {
             LOG.error("Initialization the context failed", e);
             m_context = null;
         }
+    }
+
+    @Override
+    public void init() {
+        // Init is not always called before start by eventd - so we do nothing here
     }
 
     @Override
@@ -106,6 +110,9 @@ public class CamelEventReceiver implements EventReceiver {
 
     public void onEventReceived(Event event) {
         synchronized (m_eventHandlers) {
+            // Mark the event as "local" so it does not get re-broadcasted
+            event.setLocal(true);
+
             // Pass the event to all of the event handlers
             for (final EventHandler eventHandler : m_eventHandlers) {
                 try {
