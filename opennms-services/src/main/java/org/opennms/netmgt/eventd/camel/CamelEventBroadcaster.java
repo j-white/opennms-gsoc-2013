@@ -1,82 +1,48 @@
 package org.opennms.netmgt.eventd.camel;
 
 import org.apache.camel.CamelContext;
+import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
-import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.impl.DefaultCamelContext;
 import org.opennms.netmgt.model.events.EventProcessor;
 import org.opennms.netmgt.xml.event.Event;
 import org.opennms.netmgt.xml.event.Header;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 
-public class CamelEventBroadcaster implements EventProcessor,
-        InitializingBean, DisposableBean {
+public class CamelEventBroadcaster implements EventProcessor {
     /**
      * Camel context.
      */
-    private CamelContext m_context;
+    @Autowired
+    private CamelContext m_camelContext;
 
     /**
      * Camel producer used to inject events.
      */
+    @Produce(uri = "direct:event")
     private ProducerTemplate m_producer;
-
-    /**
-     * Input.
-     */
-    private static final String ROUTE_INPUT_URI = "direct:event";
-
-    /**
-     * Output.
-     */
-    private static final String ROUTE_ENDPOINT_URI = "netty:udp://224.2.2.3:5818/?broadcast=true";
 
     /**
      * Logger.
      */
     private static final Logger LOG = LoggerFactory.getLogger(CamelEventBroadcaster.class);
 
+    /**
+     * Broadcasts the event.
+     */
     @Override
     public void process(Header eventHeader, Event event) {
         if (event.getLogmsg() != null
                 && event.getLogmsg().getDest().equals("suppress")) {
-            LOG.debug("process: skip sending event {} broadcast because it is marked as suppress",
+            LOG.error("process: skip sending event {} broadcast because it is marked as suppress",
                       event.getUei());
         } else if (event.getLocal()) {
-            LOG.debug("process: skip sending event {} broadcast because it is marked as local",
+            LOG.error("process: skip sending event {} broadcast because it is marked as local",
                       event.getUei());
-        } else {
-            if (!"donotpersist".equals(event.getLogmsg().getDest())) {
-                LOG.debug("{}: uei '{}' marked as '{}'; changing to 'donotpersist' before broadcasting",
-                          event.getUei(), event.getLogmsg().getDest());
-                event.getLogmsg().setDest("donotpersist");
-            }
-
-            LOG.debug("process: broadcasting event {}", event);
+        } else  {
+            LOG.error("process: broadcasting event {}", event);
             m_producer.sendBody("direct:event", event);
-        }
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        m_context = new DefaultCamelContext();
-        m_context.addRoutes(new RouteBuilder() {
-            @Override
-            public void configure() {
-                from(ROUTE_INPUT_URI).to(ROUTE_ENDPOINT_URI);
-            }
-        });
-        m_context.start();
-        m_producer = m_context.createProducerTemplate();     
-    }
-
-    @Override
-    public void destroy() throws Exception {
-        if (m_context != null) {
-            m_context.stop();
         }
     }
 }

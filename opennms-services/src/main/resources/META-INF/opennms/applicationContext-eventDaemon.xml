@@ -5,6 +5,8 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-2.0.xsd">
 
+  <import resource="classpath:/META-INF/opennms/applicationContext-camelEventd.xml" />
+
   <bean id="daemon" class="org.opennms.netmgt.eventd.Eventd">
     <property name="eventdServiceManager" ref="eventdServiceManager"/>
     <property name="eventReceivers">
@@ -16,8 +18,7 @@
     </property>
     <property name="receiver" ref="broadcastEventProcessor"/>
   </bean>
-  
-  
+
   <bean id="eventdConfigManager-init" class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
     <property name="staticMethod"><value>org.opennms.netmgt.config.EventdConfigFactory.init</value></property>
   </bean>
@@ -97,16 +98,6 @@
       </list>
     </property>
   </bean>
-
-  <bean id="camelReceiver" class="org.opennms.netmgt.eventd.camel.CamelEventReceiver">
-    <property name="eventHandlers">
-      <list>
-        <ref local="eventHandler"/>
-      </list>
-    </property>
-  </bean>
-  
-  <bean id="camelBroadcaster" class="org.opennms.netmgt.eventd.camel.CamelEventBroadcaster"/>
   
   <bean id="tcpIpAddress" factory-bean="eventdConfigManager" factory-method="getTCPIpAddress"/>
 
@@ -120,6 +111,16 @@
     <constructor-arg><ref bean="eventIpcManager"/></constructor-arg>
     <constructor-arg><ref bean="eventConfDao"/></constructor-arg>
   </bean>
+
+  <bean id="camelReceiver" class="org.opennms.netmgt.eventd.camel.CamelEventReceiver">
+    <property name="eventHandlers">
+      <list>
+        <ref local="eventHandler"/>
+      </list>
+    </property>
+  </bean>
+
+  <bean id="camelBroadcaster" class="org.opennms.netmgt.eventd.camel.CamelEventBroadcaster"/>
 
   <tx:annotation-driven/>
 </beans>
