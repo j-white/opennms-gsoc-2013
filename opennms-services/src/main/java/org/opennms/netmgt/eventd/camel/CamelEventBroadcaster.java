@@ -20,8 +20,13 @@ public class CamelEventBroadcaster implements EventProcessor {
     /**
      * Camel producer used to inject events.
      */
-    @Produce(uri = "direct:event")
+    @Produce(uri = PRODUCER_URI)
     private ProducerTemplate m_producer;
+
+    /**
+     * Producer.
+     */
+    private static final String PRODUCER_URI = "seda:event";
 
     /**
      * Logger.
@@ -42,7 +47,7 @@ public class CamelEventBroadcaster implements EventProcessor {
                       event.getUei());
         } else  {
             LOG.error("process: broadcasting event {}", event);
-            m_producer.sendBody("direct:event", event);
+            m_producer.sendBody(PRODUCER_URI, event);
         }
     }
 }

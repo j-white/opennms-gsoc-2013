@@ -10,14 +10,20 @@
         <property name="location" value="classpath:camel-eventd.properties"/>
     </bean>
 
+	<bean id="shutdown" class="org.apache.camel.impl.DefaultShutdownStrategy">
+		<property name="timeout" value="15"/>
+	</bean>
+
     <camelContext id="camel" xmlns="http://camel.apache.org/schema/spring">
         <route>
             <from uri="{{receiver.input.uri}}"/>
+            <setExchangePattern pattern="InOnly"/>
             <to uri="bean:camelReceiver?method=onEventReceived"/>
         </route>
 
         <route>
-            <from uri="direct:event"/>
+            <from uri="seda:event"/>
+            <setExchangePattern pattern="InOnly"/>
             <to uri="{{broadcaster.output.uri}}"/>
         </route>
     </camelContext>
