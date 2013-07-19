@@ -423,15 +423,29 @@
     <dependency>
       <groupId>org.opennms.dependencies</groupId>
       <artifactId>camel-dependencies</artifactId>
-      <version>${project.version}</version>
       <type>pom</type>
     </dependency>
     <dependency>
       <groupId>org.opennms.dependencies</groupId>
       <artifactId>camel-test-dependencies</artifactId>
-      <version>${project.version}</version>
       <scope>test</scope>
       <type>pom</type>
+    </dependency>
+   <dependency>
+      <groupId>org.apache.camel</groupId>
+      <artifactId>camel-test</artifactId>
+      <version>${camelVersion}</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.xml.bind</groupId>
+          <artifactId>jaxb-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.sun.xml.bind</groupId>
+          <artifactId>jaxb-impl</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 </project>

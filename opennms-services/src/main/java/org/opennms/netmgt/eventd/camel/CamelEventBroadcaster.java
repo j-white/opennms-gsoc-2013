@@ -47,7 +47,7 @@ public class CamelEventBroadcaster implements EventProcessor {
                       event.getUei());
         } else  {
             LOG.error("Broadcasting event with uei {} and dbid {}", event.getUei(), event.getDbid());
-            m_producer.sendBody(PRODUCER_URI, event);
+            m_producer.sendBody(event);
         }
     }
 }
