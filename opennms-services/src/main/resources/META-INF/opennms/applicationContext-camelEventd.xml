@@ -14,6 +14,14 @@
 		<property name="timeout" value="15"/>
 	</bean>
 
+    <bean id="jms" class="org.apache.camel.component.jms.JmsComponent">
+        <property name="connectionFactory">
+            <bean class="org.apache.activemq.ActiveMQConnectionFactory">
+                <property name="brokerURL" value="vm://localhost" />
+            </bean>
+        </property>
+    </bean>
+
     <camelContext id="camel" xmlns="http://camel.apache.org/schema/spring">
 		<dataFormats>
 			<jaxb id="jaxb" contextPath="org.opennms.netmgt.xml.event"/>
@@ -22,13 +30,11 @@
 		<route>
             <from uri="seda:event"/>
             <marshal ref="jaxb"/>
-            <setExchangePattern pattern="InOnly"/>
-            <to uri="{{broadcaster.output.uri}}"/>
+            <to uri="{{event.topic.uri}}"/>
         </route>
 
         <route>
             <from uri="{{receiver.input.uri}}"/>
-            <setExchangePattern pattern="InOnly"/>
             <unmarshal ref="jaxb"/>
             <to uri="bean:camelReceiver?method=onEventReceived"/>
         </route>
