@@ -15,16 +15,22 @@
 	</bean>
 
     <camelContext id="camel" xmlns="http://camel.apache.org/schema/spring">
-        <route>
-            <from uri="{{receiver.input.uri}}"/>
+		<dataFormats>
+			<jaxb id="jaxb" contextPath="org.opennms.netmgt.xml.event"/>
+		</dataFormats>
+
+		<route>
+            <from uri="seda:event"/>
+            <marshal ref="jaxb"/>
             <setExchangePattern pattern="InOnly"/>
-            <to uri="bean:camelReceiver?method=onEventReceived"/>
+            <to uri="{{broadcaster.output.uri}}"/>
         </route>
 
         <route>
-            <from uri="seda:event"/>
+            <from uri="{{receiver.input.uri}}"/>
             <setExchangePattern pattern="InOnly"/>
-            <to uri="{{broadcaster.output.uri}}"/>
+            <unmarshal ref="jaxb"/>
+            <to uri="bean:camelReceiver?method=onEventReceived"/>
         </route>
     </camelContext>
 </beans>

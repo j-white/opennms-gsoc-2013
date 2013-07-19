@@ -61,7 +61,7 @@ public class CamelEventdIntegrationTest {
         Event expectedEvent = eventBuilder.getEvent();
 
         // Expect the mock event to be sent to route endpoint
-        broadcasterOutput.expectedBodiesReceived(expectedEvent);
+        broadcasterOutput.expectedMessageCount(1);
 
         // Manually invoke process with the event
         camelEventBroadcaster.process(new Header(), expectedEvent);
