@@ -43,10 +43,9 @@ public class HazelcastDataGridProvider implements DataGridProvider {
         getHazelcastInstance();
     }
 
-
     @Override
     public void shutdown() {
-        //TODO
+        getHazelcastInstance().getLifecycleService().shutdown();
     }
 
     /** {@inheritDoc} */
@@ -86,6 +85,11 @@ public class HazelcastDataGridProvider implements DataGridProvider {
         return getHazelcastInstance().getName();
     }
 
+    @Override
+    public Member getLocalMember() {
+        return new HazelcastMember(getHazelcastInstance().getCluster().getLocalMember());
+    }
+
     /** {@inheritDoc} */
     @Override
     public Set<Member> getClusterMembers() {
@@ -101,8 +105,8 @@ public class HazelcastDataGridProvider implements DataGridProvider {
     }
 
     @Override
-    public void addMembershipListener(MembershipListener listener) {
-        getHazelcastInstance().getCluster().addMembershipListener(new HazelcastMembershipListener(listener));
+    public String addMembershipListener(MembershipListener listener) {
+        return getHazelcastInstance().getCluster().addMembershipListener(new HazelcastMembershipListener(listener));
     }
 
     @Override

@@ -33,13 +33,15 @@ public interface DataGridProvider {
 
     String getName();
 
+    public Member getLocalMember();
+    
     public Set<Member> getClusterMembers();
 
 
     <T> Topic<T> getTopic(String name);
     
     
-    public void addMembershipListener(MembershipListener listener);
+    public String addMembershipListener(MembershipListener listener);
 
     public void removeMembershipListener(String registrationId);
 }

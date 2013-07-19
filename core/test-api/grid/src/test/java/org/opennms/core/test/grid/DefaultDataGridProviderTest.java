@@ -43,6 +43,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.opennms.core.grid.DataGridProviderFactory;
 import org.opennms.core.grid.DataGridProvider;
+import org.opennms.core.grid.MembershipEvent;
+import org.opennms.core.grid.MembershipListener;
 import org.opennms.core.test.MockLogAppender;
 import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
 import org.opennms.core.test.grid.annotations.JUnitGrid;
@@ -60,9 +62,13 @@ import org.springframework.test.context.ContextConfiguration;
         "classpath:/META-INF/opennms/applicationContext-soa.xml",
         "classpath*:/META-INF/opennms/component-dao.xml" })
 @JUnitGrid()
-public class DefaultDataGridProviderTest implements InitializingBean {
+public class DefaultDataGridProviderTest implements InitializingBean,
+        MembershipListener {
     @Autowired
     private DataGridProvider m_dataGridProvider = null;
+
+    int m_membersAdded;
+    int m_membersRemoved;
 
     /**
      * The number of cluster members to test with.
@@ -81,6 +87,8 @@ public class DefaultDataGridProviderTest implements InitializingBean {
     @Before
     public void setUp() {
         MockLogAppender.setupLogging(true, "INFO");
+        m_membersAdded = 0;
+        m_membersRemoved = 0;
     }
 
     /**
@@ -121,6 +129,45 @@ public class DefaultDataGridProviderTest implements InitializingBean {
         };
     }
 
+    @Test
+    public void membershipListener() {
+        DataGridProvider firstDataGridProvider = DataGridProviderFactory.getNewInstance();
+        firstDataGridProvider.init();
+        firstDataGridProvider.addMembershipListener(this);
+
+        DataGridProvider dataGridProvider[] = new DataGridProvider[NUM_CLUSTER_MEMBERS];
+        for (int i = 0; i < NUM_CLUSTER_MEMBERS; i++) {
+            // Get a new instance as opposed to re-using the same one so that
+            // multiple members can be on the cluster
+            dataGridProvider[i] = DataGridProviderFactory.getNewInstance();
+            dataGridProvider[i].init();
+        }
+
+        await().until(getNumMembersAdded(), is(NUM_CLUSTER_MEMBERS));
+
+        for (int i = 0; i < NUM_CLUSTER_MEMBERS; i++) {
+            dataGridProvider[i].shutdown();
+        }
+
+        await().until(getNumMembersRemoved(), is(NUM_CLUSTER_MEMBERS));
+    }
+
+    private Callable<Integer> getNumMembersAdded() {
+        return new Callable<Integer>() {
+            public Integer call() throws Exception {
+                return m_membersAdded;
+            }
+        };
+    }
+
+    private Callable<Integer> getNumMembersRemoved() {
+        return new Callable<Integer>() {
+            public Integer call() throws Exception {
+                return m_membersRemoved;
+            }
+        };
+    }
+
     /**
      * Ensure that the elements added to the distributed queue are equally
      * distributed amongst the available consumers.
@@ -136,7 +183,7 @@ public class DefaultDataGridProviderTest implements InitializingBean {
         for (int i = 0; i < NUM_CLUSTER_MEMBERS; i++) {
             dataGridProvider[i] = DataGridProviderFactory.getNewInstance();
             dataGridProvider[i].init();
-            
+
             consumer[i] = new MyConsumer(dataGridProvider[i], queueName);
         }
 
@@ -149,7 +196,7 @@ public class DefaultDataGridProviderTest implements InitializingBean {
         }
 
         // Add elements to the queue
-        for (int i = 0; i < (NUM_CLUSTER_MEMBERS*NUM_ELEMENTS_PER_CONSUMER); i++) {
+        for (int i = 0; i < (NUM_CLUSTER_MEMBERS * NUM_ELEMENTS_PER_CONSUMER); i++) {
             queue.add(i);
         }
 
@@ -159,17 +206,17 @@ public class DefaultDataGridProviderTest implements InitializingBean {
         // Kill the consumers, and verify the distribution
         for (int i = 0; i < NUM_CLUSTER_MEMBERS; i++) {
             consumer[i].stop();
-            assertEquals(NUM_ELEMENTS_PER_CONSUMER, consumer[i].getNumElementsConsumed());
+            assertEquals(NUM_ELEMENTS_PER_CONSUMER,
+                         consumer[i].getNumElementsConsumed());
         }
     }
 
-    private Callable<Integer> getNumElements(
-           final Queue<Integer> queue) {
-       return new Callable<Integer>() {
-           public Integer call() throws Exception {
-               return queue.size();
-           }
-       };
+    private Callable<Integer> getNumElements(final Queue<Integer> queue) {
+        return new Callable<Integer>() {
+            public Integer call() throws Exception {
+                return queue.size();
+            }
+        };
     }
 
     private class MyConsumer implements Runnable {
@@ -203,7 +250,7 @@ public class DefaultDataGridProviderTest implements InitializingBean {
         public void run() {
             BlockingQueue<Integer> queue = m_dataGridProvider.getQueue(m_queueName);
             try {
-                while(true) {
+                while (true) {
                     queue.take();
                     m_numElementsConsumed++;
                 }
@@ -211,5 +258,15 @@ public class DefaultDataGridProviderTest implements InitializingBean {
                 return;
             }
         }
+    }
+
+    @Override
+    public void memberAdded(MembershipEvent membershipEvent) {
+        m_membersAdded++;
+    }
+
+    @Override
+    public void memberRemoved(MembershipEvent membershipEvent) {
+        m_membersRemoved++;
     }
 }
