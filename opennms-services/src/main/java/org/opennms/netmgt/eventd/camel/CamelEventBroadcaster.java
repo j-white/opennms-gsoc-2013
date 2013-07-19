@@ -1,5 +1,7 @@
 package org.opennms.netmgt.eventd.camel;
 
+import java.util.Set;
+
 import org.apache.camel.CamelContext;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
@@ -16,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.Assert;
 
 public class CamelEventBroadcaster implements EventProcessor, InitializingBean, DisposableBean, MembershipListener {
     /**
@@ -71,27 +74,34 @@ public class CamelEventBroadcaster implements EventProcessor, InitializingBean, 
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        if (m_dataGridProvider == null) {
-            m_dataGridProvider = DataGridProviderFactory.getInstance();
-        }
+        Assert.notNull(m_dataGridProvider);
+
+        Set<Member> clusterMembers = m_dataGridProvider.getClusterMembers();
+        LOG.info("There are currently {} members in the cluster.", clusterMembers.size());
 
         Member localMember = m_dataGridProvider.getLocalMember();
-        for (Member member : m_dataGridProvider.getClusterMembers()) {
-            if (localMember.getUuid() != member.getUuid()) {
-                addRouteForMember(member);
+        for (Member member : clusterMembers) {
+            if (localMember.getUuid() == member.getUuid()) {
+                LOG.info("Skipping route for {} @ {}", member.getUuid(), member.getInetSocketAddress());
+                continue;
             }
+
+            addRouteForMember(member);
         }
 
-        LOG.info("Registering membership listener.");
+        LOG.info("Adding membership listener.");
         m_registrationId = m_dataGridProvider.addMembershipListener(this);
     }
 
     @Override
     public void destroy() throws Exception {
+        LOG.info("Removing membership listener.");
         m_dataGridProvider.removeMembershipListener(m_registrationId);
     }
 
     public void addRouteForMember(Member member) {
+        LOG.info("Adding route for {} @ {} .", member.getUuid(), member.getInetSocketAddress());
+
         ClusterRouteBuilder routeBuilder = new ClusterRouteBuilder(member.getUuid(), member);
         try {
             m_camelContext.addRoutes(routeBuilder);
@@ -103,17 +113,16 @@ public class CamelEventBroadcaster implements EventProcessor, InitializingBean, 
 
     @Override
     public void memberAdded(MembershipEvent membershipEvent) {
-        Member member = membershipEvent.getMember();
-        LOG.info("A member was added to the cluster. Adding route for {} .", member.getInetSocketAddress());
-
-        addRouteForMember(member);
+        LOG.info("A member was added to the cluster.");
+        addRouteForMember(membershipEvent.getMember());
     }
 
     @Override
     public void memberRemoved(MembershipEvent membershipEvent) {
-        Member member = membershipEvent.getMember();
-        LOG.info("A member was removed from the cluster. Removing route for {} .", member.getInetSocketAddress());
+        LOG.info("A member was removed from the cluster");
 
+        Member member = membershipEvent.getMember();
+        LOG.info("Removing route for {} @ {} .", member.getUuid(), member.getInetSocketAddress());
         try {
             m_camelContext.removeRoute(member.getUuid());
         } catch (Exception e) {
