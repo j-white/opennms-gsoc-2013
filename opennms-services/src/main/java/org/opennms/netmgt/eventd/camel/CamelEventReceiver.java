@@ -32,7 +32,7 @@ public class CamelEventReceiver implements EventReceiver {
             return;
         }
 
-        LOG.error("Received event with uei {} and dbid {}", event.getUei(), event.getDbid());
+        LOG.info("Received event with uei {} and dbid {}", event.getUei(), event.getDbid());
 
         synchronized (m_eventHandlers) {
             // Mark the event as "local" so it does not get re-broadcasted
@@ -47,7 +47,7 @@ public class CamelEventReceiver implements EventReceiver {
             // Pass the event to all of the event handlers
             for (final EventHandler eventHandler : m_eventHandlers) {
                 try {
-                    LOG.error("Processing event with uei {} and dbid {} via {}", event.getUei(), event.getDbid(), eventHandler.getClass());
+                    LOG.debug("Processing event with uei {} and dbid {} via {}", event.getUei(), event.getDbid(), eventHandler.getClass());
                     eventHandler.processEvent(event);
                 } catch (final Throwable t) {
                     LOG.warn("An exception occured while processing an event.", t);

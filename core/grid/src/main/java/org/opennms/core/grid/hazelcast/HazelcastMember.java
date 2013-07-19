@@ -37,6 +37,10 @@ public class HazelcastMember implements Member {
         return m_hazelcastMember.getInetSocketAddress();
     }
 
+    public String toString() {
+        return String.format("HazelcastMember[uuid={%s},address={%s}]", getUuid(), getInetSocketAddress());
+    }
+
     @Override
     public int hashCode() {
         final int prime = 31;

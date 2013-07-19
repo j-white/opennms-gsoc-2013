@@ -1,12 +1,12 @@
 package org.opennms.netmgt.eventd.camel;
 
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
 import org.opennms.core.grid.DataGridProvider;
-import org.opennms.core.grid.DataGridProviderFactory;
 import org.opennms.core.grid.Member;
 import org.opennms.core.grid.MembershipEvent;
 import org.opennms.core.grid.MembershipListener;
@@ -20,12 +20,13 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.Assert;
 
-public class CamelEventBroadcaster implements EventProcessor, InitializingBean, DisposableBean, MembershipListener {
+public class CamelEventBroadcaster implements EventProcessor,
+        InitializingBean, DisposableBean, MembershipListener {
     /**
      * Data grid.
      */
     @Autowired
-    private DataGridProvider m_dataGridProvider = null;
+    private DataGridProvider m_dataGridProvider;
 
     /**
      * Camel context.
@@ -61,13 +62,14 @@ public class CamelEventBroadcaster implements EventProcessor, InitializingBean, 
     public void process(Header eventHeader, Event event) {
         if (event.getLogmsg() != null
                 && event.getLogmsg().getDest().equals("suppress")) {
-            LOG.error("Skip sending event {} broadcast because it is marked as suppress",
+            LOG.debug("Skip sending event {} broadcast because it is marked as suppress",
                       event.getUei());
         } else if (event.getLocal()) {
-            LOG.error("Skip sending event {} broadcast because it is marked as local",
+            LOG.debug("Skip sending event {} broadcast because it is marked as local",
                       event.getUei());
-        } else  {
-            LOG.error("Broadcasting event with uei {} and dbid {}", event.getUei(), event.getDbid());
+        } else {
+            LOG.info("Broadcasting event with uei {} and dbid {}",
+                     event.getUei(), event.getDbid());
             m_producer.sendBody(event);
         }
     }
@@ -77,12 +79,14 @@ public class CamelEventBroadcaster implements EventProcessor, InitializingBean, 
         Assert.notNull(m_dataGridProvider);
 
         Set<Member> clusterMembers = m_dataGridProvider.getClusterMembers();
-        LOG.info("There are currently {} members in the cluster.", clusterMembers.size());
+        LOG.info("There are currently {} members in the cluster.",
+                 clusterMembers.size());
 
         Member localMember = m_dataGridProvider.getLocalMember();
         for (Member member : clusterMembers) {
             if (localMember.getUuid() == member.getUuid()) {
-                LOG.info("Skipping route for {} @ {}", member.getUuid(), member.getInetSocketAddress());
+                LOG.info("Skipping route for {} @ {}", member.getUuid(),
+                         member.getInetSocketAddress());
                 continue;
             }
 
@@ -100,9 +104,9 @@ public class CamelEventBroadcaster implements EventProcessor, InitializingBean, 
     }
 
     public void addRouteForMember(Member member) {
-        LOG.info("Adding route for {} @ {} .", member.getUuid(), member.getInetSocketAddress());
+        LOG.info("Adding route for {}", member);
 
-        ClusterRouteBuilder routeBuilder = new ClusterRouteBuilder(member.getUuid(), member);
+        ClusterRouteBuilder routeBuilder = new ClusterRouteBuilder(member);
         try {
             m_camelContext.addRoutes(routeBuilder);
             m_camelContext.startRoute(routeBuilder.getRouteId());
@@ -122,11 +126,15 @@ public class CamelEventBroadcaster implements EventProcessor, InitializingBean, 
         LOG.info("A member was removed from the cluster");
 
         Member member = membershipEvent.getMember();
-        LOG.info("Removing route for {} @ {} .", member.getUuid(), member.getInetSocketAddress());
+        ClusterRouteBuilder routeBuilder = new ClusterRouteBuilder(member);
         try {
-            m_camelContext.removeRoute(member.getUuid());
+            LOG.info("Stopping route for {}.", member);
+            m_camelContext.stopRoute(routeBuilder.getRouteId(), 5,
+                                     TimeUnit.SECONDS);
+            m_camelContext.removeRoute(routeBuilder.getRouteId());
         } catch (Exception e) {
-            LOG.error(e.getMessage());
+            LOG.error("Failed to stop the route for {}: {}", member,
+                      e.getMessage());
         }
     }
 }
