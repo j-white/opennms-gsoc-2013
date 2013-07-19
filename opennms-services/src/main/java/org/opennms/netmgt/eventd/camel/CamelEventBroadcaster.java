@@ -4,6 +4,7 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
 import org.opennms.core.grid.DataGridProvider;
+import org.opennms.core.grid.DataGridProviderFactory;
 import org.opennms.core.grid.Member;
 import org.opennms.core.grid.MembershipEvent;
 import org.opennms.core.grid.MembershipListener;
@@ -70,6 +71,10 @@ public class CamelEventBroadcaster implements EventProcessor, InitializingBean, 
 
     @Override
     public void afterPropertiesSet() throws Exception {
+        if (m_dataGridProvider == null) {
+            m_dataGridProvider = DataGridProviderFactory.getInstance();
+        }
+
         Member localMember = m_dataGridProvider.getLocalMember();
         for (Member member : m_dataGridProvider.getClusterMembers()) {
             if (localMember.getUuid() != member.getUuid()) {
