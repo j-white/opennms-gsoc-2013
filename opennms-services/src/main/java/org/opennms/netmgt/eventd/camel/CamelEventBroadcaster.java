@@ -82,6 +82,7 @@ public class CamelEventBroadcaster implements EventProcessor, InitializingBean, 
             }
         }
 
+        LOG.info("Registering membership listener.");
         m_registrationId = m_dataGridProvider.addMembershipListener(this);
     }
 
@@ -103,12 +104,16 @@ public class CamelEventBroadcaster implements EventProcessor, InitializingBean, 
     @Override
     public void memberAdded(MembershipEvent membershipEvent) {
         Member member = membershipEvent.getMember();
+        LOG.info("A member was added to the cluster. Adding route for {} .", member.getInetSocketAddress());
+
         addRouteForMember(member);
     }
 
     @Override
     public void memberRemoved(MembershipEvent membershipEvent) {
         Member member = membershipEvent.getMember();
+        LOG.info("A member was removed from the cluster. Removing route for {} .", member.getInetSocketAddress());
+
         try {
             m_camelContext.removeRoute(member.getUuid());
         } catch (Exception e) {

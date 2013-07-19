@@ -38,12 +38,16 @@ import org.springframework.test.context.support.AbstractTestExecutionListener;
 import com.hazelcast.core.Hazelcast;
 
 public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
+    private boolean m_reuseGrid = false;
+
     public void beforeTestClass(TestContext testContext) throws Exception {
         final JUnitGrid jug = findAnnotation(testContext);
 
         if (jug == null) {
             return;
         }
+
+        m_reuseGrid = jug.reuseGrid();
 
         System.setProperty("hazelcast.logging.type", "slf4j");
         System.setProperty("java.net.preferIPv4Stack", "true");
@@ -56,7 +60,9 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
             return;
         }
 
-        shutdownAndResetProvider();
+        if (!m_reuseGrid) {
+            shutdownAndResetProvider();
+        }
     }
 
     public void afterTestMethod(TestContext testContext) throws Exception {
@@ -66,6 +72,12 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
             return;
         }
 
+        if (!m_reuseGrid) {
+            shutdownAndResetProvider();
+        }
+    }
+
+    public void afterTestClass(TestContext testContext) throws Exception {
         shutdownAndResetProvider();
     }
 

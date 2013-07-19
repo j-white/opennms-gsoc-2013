@@ -4,16 +4,14 @@ import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.concurrent.Callable;
 
 import org.apache.camel.CamelContext;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.opennms.core.grid.Member;
+import org.opennms.core.grid.DataGridProvider;
+import org.opennms.core.grid.DataGridProviderFactory;
 import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
 import org.opennms.core.test.grid.annotations.JUnitGrid;
 import org.opennms.core.utils.BeanUtils;
@@ -30,7 +28,7 @@ import org.springframework.test.context.ContextConfiguration;
         "classpath*:/META-INF/opennms/component-dao.xml",
         "classpath:META-INF/opennms/applicationContext-camelEventd.xml",
         "classpath:META-INF/opennms/applicationContext-camelEventdTest.xml" })
-@JUnitGrid()
+@JUnitGrid(reuseGrid=true)
 public class CamelEventdIntegrationTest {
     @Autowired
     protected CamelContext camelContext;
@@ -44,6 +42,9 @@ public class CamelEventdIntegrationTest {
     @Autowired
     protected MockCamelBroadcastEventHandler mockBroadcastHandler;
 
+    @Autowired
+    protected DataGridProvider dataGridProvider;
+
     @Before
     public void setUp() {
         BeanUtils.assertAutowiring(this);
@@ -53,22 +54,14 @@ public class CamelEventdIntegrationTest {
 
     @Test
     public void testEventBroadcasterAndReceiver() throws Exception {
-        // Add a route back to the localhost
-        camelEventBroadcaster.addRouteForMember(new Member() {
-            @Override
-            public String getUuid() {
-                return "localhost";
-            }
+        assertEquals(Integer.valueOf(1), getNumClusterMembers(dataGridProvider).call());
 
-            @Override
-            public InetSocketAddress getInetSocketAddress() {
-                try {
-                    return new InetSocketAddress(InetAddress.getByName("localhost"), 0);
-                } catch (UnknownHostException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        });
+        // Add a second member to the cluster, the member listener should trigger
+        // the addition of a new route
+        DataGridProvider anotherDataGridProvider = DataGridProviderFactory.getNewInstance();
+        anotherDataGridProvider.init();
+
+        await().until(getNumClusterMembers(dataGridProvider), is(2));
 
         // Create a mock event
         EventBuilder eventBuilder = new EventBuilder(
@@ -88,7 +81,16 @@ public class CamelEventdIntegrationTest {
         // Compare the events
         assertEquals(expectedEvent.getUei(), mockBroadcastHandler.getLastEvent().getUei());
     }
-    
+
+    private Callable<Integer> getNumClusterMembers(
+           final DataGridProvider dataGridProvider) {
+       return new Callable<Integer>() {
+           public Integer call() throws Exception {
+               return dataGridProvider.getClusterMembers().size();
+           }
+       };
+   }
+
     private Callable<Integer> getNumEventsProcessed() {
         return new Callable<Integer>() {
             public Integer call() {
