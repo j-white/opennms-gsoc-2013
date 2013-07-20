@@ -13,6 +13,7 @@
   <modules>
     <module>db</module>
     <module>dns</module>
+    <module>grid</module>
     <module>lib</module>
     <module>http</module>
     <module>services</module>

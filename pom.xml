@@ -878,6 +878,7 @@
     <ecjVersion>4.2.2</ecjVersion>
     <gwtVersion>2.5.1</gwtVersion>
     <gwtPluginVersion>2.5.1</gwtPluginVersion>
+    <hazelcastVersion>3.0-SNAPSHOT</hazelcastVersion>
     <httpcoreVersion>4.2.4</httpcoreVersion>
     <httpclientVersion>4.2.5</httpclientVersion>
     <jasperreportsVersion>3.7.6</jasperreportsVersion>
@@ -1196,6 +1197,12 @@
       <dependency>
         <groupId>org.opennms.core.test-api</groupId>
         <artifactId>org.opennms.core.test-api.dns</artifactId>
+        <version>${project.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.opennms.core.test-api</groupId>
+        <artifactId>org.opennms.core.test-api.grid</artifactId>
         <version>${project.version}</version>
         <scope>test</scope>
       </dependency>
@@ -1779,6 +1786,11 @@
         <version>${project.version}</version>
         <type>tar.gz</type>
         <classifier>dist</classifier>
+      </dependency>
+      <dependency>
+        <groupId>org.opennms.core</groupId>
+        <artifactId>org.opennms.core.grid</artifactId>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.opennms</groupId>
