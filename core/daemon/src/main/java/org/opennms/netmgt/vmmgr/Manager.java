@@ -41,6 +41,7 @@ import java.util.TreeMap;
 import javax.management.MBeanServer;
 import javax.management.MBeanServerFactory;
 
+import org.opennms.netmgt.config.service.Service;
 import org.opennms.netmgt.config.service.types.InvokeAtType;
 import org.opennms.netmgt.icmp.Pinger;
 import org.opennms.netmgt.icmp.PingerFactory;
@@ -101,16 +102,10 @@ public class Manager implements ManagerMBean {
     
     private void stop(MBeanServer server) {
         LOG.debug("Beginning shutdown");
-        Invoker invoker = new Invoker();
-        invoker.setServer(server);
-        invoker.setAtType(InvokeAtType.STOP);
-        invoker.setReverse(true);
-        invoker.setFailFast(false);
-        
-        List<InvokerService> services = InvokerService.createServiceList(Invoker.getDefaultServiceConfigFactory().getServices());
-        invoker.setServices(services);
-        invoker.getObjectInstances();
-        invoker.invokeMethods();
+
+        ServiceManager serviceManager = new ServiceManagerDefault();
+        List<Service> allServicesStarted = ServiceRegister.getInstance().getServices();
+        serviceManager.stop(allServicesStarted);
 
         LOG.debug("Shutdown complete");
     }
@@ -138,7 +133,7 @@ public class Manager implements ManagerMBean {
         invoker.setAtType(InvokeAtType.STATUS);
         invoker.setFailFast(false);
 
-        final List<InvokerService> services = InvokerService.createServiceList(Invoker.getDefaultServiceConfigFactory().getServices());
+        final List<InvokerService> services = InvokerService.createServiceList(ServiceRegister.getInstance().getServices());
         invoker.setServices(services);
         invoker.getObjectInstances();
         final List<InvokerResult> results = invoker.invokeMethods();

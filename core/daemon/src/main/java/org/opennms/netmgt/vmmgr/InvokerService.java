@@ -50,7 +50,11 @@ class InvokerService {
     private InvokerService(Service service) {
         setService(service);
     }
-    
+
+    static List<InvokerService> createServiceList(List<Service> services) {
+        return createServiceList(services.toArray(new Service[0]));
+    }
+
     static List<InvokerService> createServiceList(Service[] services) {
         List<InvokerService> invokerServices = new ArrayList<InvokerService>(services.length);
         

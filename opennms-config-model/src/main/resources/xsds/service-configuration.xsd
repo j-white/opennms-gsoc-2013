@@ -40,6 +40,16 @@
 
         <element maxOccurs="unbounded" minOccurs="0" ref="this:invoke"/>
       </sequence>
+
+      <attribute name="type" use="optional">
+        <simpleType>
+          <restriction base="string">
+            <enumeration value="vanilla"/>
+            <enumeration value="bootstrap"/>
+            <enumeration value="distributed"/>
+          </restriction>
+        </simpleType>
+      </attribute>
     </complexType>
   </element>
 

@@ -32,14 +32,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.management.ManagementFactory;
 import java.net.URL;
 import java.util.List;
 import java.util.Properties;
 import java.util.TreeMap;
 import java.util.Map.Entry;
-
-import javax.management.MBeanServer;
 
 import org.apache.commons.io.IOUtils;
 import org.opennms.core.logging.Logging;
@@ -50,7 +47,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * <p>
- * The Manager is reponsible for launching/starting all services in the VM
+ * The Manager is responsible for launching/starting all services in the VM
  * that it is started for. The Manager operates in two modes, normal and
  * server
  * </p>
@@ -63,7 +60,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * server mode: In the server mode, the Manager starts up and listens on the
  * 'control-broadcast' JMS topic for 'start' control messages for services in
- * its VM and a stop control messge for itself. When a start for a service is
+ * its VM and a stop control message for itself. When a start for a service is
  * received, it launches only that service and sends a successful 'running' or
  * an 'error' response to the Controller
  * </p>
@@ -80,7 +77,7 @@ public class Starter {
     private static final Logger LOG = LoggerFactory.getLogger(Starter.class);
 
     /**
-     * The log4j category used to log debug messsages and statements.
+     * The log4j category used to log debug messages and statements.
      */
     private static final String LOG4J_CATEGORY = "manager";
 
@@ -236,39 +233,9 @@ public class Starter {
     private void start() {
         LOG.debug("Beginning startup");
 
-        MBeanServer server = ManagementFactory.getPlatformMBeanServer();
-
-        Invoker invoker = new Invoker();
-        invoker.setServer(server);
-        invoker.setAtType(InvokeAtType.START);
-        List<InvokerService> services = InvokerService.createServiceList(Invoker.getDefaultServiceConfigFactory().getServices());
-        invoker.setServices(services);
-        invoker.instantiateClasses();
-
-        List<InvokerResult> resultInfo = invoker.invokeMethods();
-
-        for (InvokerResult result : resultInfo) {
-            if (result != null && result.getThrowable() != null) {
-                Service service = result.getService();
-                String name = service.getName();
-                String className = service.getClassName();
-
-                String message =
-                        "An error occurred while attempting to start the \"" +
-                                name + "\" service (class " + className + ").  "
-                                + "Shutting down and exiting.";
-                LOG.error(message, result.getThrowable());
-                System.err.println(message);
-                result.getThrowable().printStackTrace();
-
-                Manager manager = new Manager();
-                manager.stop();
-                manager.doSystemExit();
-
-                // Shouldn't get here
-                return;
-            }
-        }
+        List<Service> servicesToStart = Invoker.getStartupServices();
+        ServiceManager serviceManager = new ServiceManagerDefault();
+        serviceManager.start(servicesToStart);
 
         LOG.debug("Startup complete");
     }

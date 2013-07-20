@@ -47,6 +47,7 @@ import org.opennms.netmgt.config.service.Argument;
 import org.opennms.netmgt.config.service.Invoke;
 import org.opennms.netmgt.config.service.Service;
 import org.opennms.netmgt.config.service.types.InvokeAtType;
+import org.opennms.netmgt.config.service.types.ServiceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,7 +109,11 @@ public class Invoker {
             throw new UndeclaredThrowableException(t);
         }
     }
-    
+
+    public static List<Service> getStartupServices() {
+        return getDefaultServiceConfigFactory().getServicesWithoutType(ServiceType.VANILLA);
+    }
+
     /**
      * <p>instantiateClasses</p>
      */
