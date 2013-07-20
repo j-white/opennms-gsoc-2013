@@ -106,7 +106,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
      * </p>
      */
     public Vacuumd() {
-        super("OpenNMS.Vacuumd");
+        super("vacuumd");
     }
 
     /*
@@ -247,14 +247,14 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     /** {@inheritDoc} */
     @Override
     public void onEvent(Event event) {
-
+        LOG.debug("Got event with uei {}", event.getUei());
         if (isReloadConfigEvent(event)) {
             handleReloadConfigEvent();
         }
     }
 
     private void handleReloadConfigEvent() {
-        LOG.info("onEvent: reloading configuration...");
+        LOG.info("Reloading configuration...");
 
         EventBuilder ebldr = null;
 /*
