@@ -57,6 +57,9 @@
     <bean id="categoryDao" class="org.opennms.netmgt.dao.mock.MockCategoryDao" />
     <onmsgi:service interface="org.opennms.netmgt.dao.api.CategoryDao" ref="categoryDao" />
 
+	<bean id="dataGridProvider" class="org.opennms.netmgt.dao.mock.MockDataGridProvider"/>
+	<onmsgi:service interface="org.opennms.core.grid.DataGridProvider" ref="dataGridProvider"/>
+
     <bean id="dataLinkInterfaceDao" class="org.opennms.netmgt.dao.mock.MockDataLinkInterfaceDao" />
     <onmsgi:service interface="org.opennms.netmgt.dao.api.DataLinkInterfaceDao" ref="dataLinkInterfaceDao" />
 
