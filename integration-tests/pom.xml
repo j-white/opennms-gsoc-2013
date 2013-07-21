@@ -96,6 +96,12 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.opennms.features.clustering</groupId>
+      <artifactId>org.opennms.features.clustering.clusterd</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.opennms</groupId>
       <artifactId>opennms-test</artifactId>
       <scope>test</scope>
