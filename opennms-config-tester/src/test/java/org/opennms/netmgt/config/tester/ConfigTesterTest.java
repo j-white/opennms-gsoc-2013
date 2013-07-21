@@ -201,6 +201,11 @@ public class ConfigTesterTest {
     }
 
     @Test
+    public void testHazelcastConfig() {
+        ignoreConfigFile("hazelcast.xml");
+    }
+
+    @Test
     public void testHttpDatacollectionConfig() {
         testConfigFile("http-datacollection-config.xml");
     }
