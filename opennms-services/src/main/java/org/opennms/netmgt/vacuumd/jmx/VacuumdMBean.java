@@ -46,4 +46,6 @@ public interface VacuumdMBean extends BaseOnmsMBean {
      * @return the number of automations that have been executed
      */
     public long getNumAutomations();
+
+    public long getNumAutomationsRan();
 }

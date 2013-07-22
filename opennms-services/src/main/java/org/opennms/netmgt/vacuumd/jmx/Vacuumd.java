@@ -139,4 +139,8 @@ public class Vacuumd implements VacuumdMBean {
         return org.opennms.netmgt.vacuumd.Vacuumd.getSingleton();
     }
 
+    @Override
+    public long getNumAutomationsRan() {
+        return getVacuumd().getNumAutomationsRan();
+    }
 }
