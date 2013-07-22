@@ -43,13 +43,18 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Receives events from Camel, via a bean call, and forwards them to the
  * registered event handlers.
  *
- * Events are marked as "local" and "donotpersist" before being forwarded to
- * any of the event handlers.
- *
  * @author jwhite
  */
 public class CamelEventReceiver implements EventReceiver {
+
+    /**
+     * Event handlers.
+     */
     private List<EventHandler> m_eventHandlers = new ArrayList<EventHandler>(3);
+
+    /**
+     * Logger.
+     */
     private static final Logger LOG = LoggerFactory.getLogger(CamelEventReceiver.class);
 
     /**
