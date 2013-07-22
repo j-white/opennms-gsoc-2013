@@ -46,6 +46,8 @@ public interface Scheduler extends ScheduleTimer {
         @Override
 	public abstract void schedule(long interval, final ReadyRunnable runnable);
 
+	public abstract void schedule(long interval, final ReadyRunnable runnable, final boolean isReschedule);
+
 	/**
 	 * This returns the current time for the scheduler
 	 *
