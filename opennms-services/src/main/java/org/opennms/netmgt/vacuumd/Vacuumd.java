@@ -48,7 +48,6 @@ import org.opennms.netmgt.model.events.EventBuilder;
 import org.opennms.netmgt.model.events.EventIpcManager;
 import org.opennms.netmgt.model.events.EventListener;
 import org.opennms.netmgt.scheduler.LegacyScheduler;
-import org.opennms.netmgt.scheduler.Schedule;
 import org.opennms.netmgt.scheduler.Scheduler;
 import org.opennms.netmgt.xml.event.Event;
 import org.opennms.netmgt.xml.event.Parm;
@@ -72,6 +71,8 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     private volatile LegacyScheduler m_scheduler;
 
     private volatile EventIpcManager m_eventMgr;
+
+    private volatile long m_numAutomationsRan = 0;
 
     /**
      * <p>getSingleton</p>
@@ -187,9 +188,8 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     private void scheduleAutomation(Automation auto) {
         if (auto.getActive()) {
             AutomationProcessor ap = new AutomationProcessor(auto);
-            Schedule s = new Schedule(ap, new AutomationInterval(auto.getInterval()), m_scheduler);
-            ap.setSchedule(s);
-            s.schedule();
+            ap.setScheduler(m_scheduler);
+            ap.schedule(false);
         }
     }
 
@@ -303,5 +303,13 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
 
     private VacuumdConfigFactory getVacuumdConfig() {
         return VacuumdConfigFactory.getInstance();
+    }
+    
+    public long getNumAutomationsRan() {
+        return m_numAutomationsRan;
+    }
+
+    protected void incNumAutomationsRan() {
+        m_numAutomationsRan++;
     }
 }
