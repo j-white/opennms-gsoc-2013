@@ -37,11 +37,13 @@ package org.opennms.netmgt.config.vacuumd;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
@@ -50,7 +52,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * Top-level element for the vacuumd-configuration.xml configuration file.
- *
+ * 
  * @version $Revision$ $Date$
  */
 @XmlRootElement(name = "VacuumdConfiguration")
@@ -113,16 +115,14 @@ public class VacuumdConfiguration implements Serializable {
     }
 
     public VacuumdConfiguration(final int period,
-            final List<Statement> statements, final Automations automations,
+            final Automations automations,
             final Triggers triggers, final Actions actions,
-            final AutoEvents autoEvents, final ActionEvents actionEvents) {
+            final ActionEvents actionEvents) {
         super();
         setPeriod(period);
-        setStatement(statements);
         setAutomations(automations);
         setTriggers(triggers);
         setActions(actions);
-        setAutoEvents(autoEvents);
         setActionEvents(actionEvents);
     }
 
@@ -131,8 +131,8 @@ public class VacuumdConfiguration implements Serializable {
     // -----------/
 
     /**
-     *
-     *
+     * 
+     * 
      * @param vStatement
      * @throws IndexOutOfBoundsException
      *             if the index given is outside the bounds of the collection
@@ -143,8 +143,8 @@ public class VacuumdConfiguration implements Serializable {
     }
 
     /**
-     *
-     *
+     * 
+     * 
      * @param index
      * @param vStatement
      * @throws IndexOutOfBoundsException
@@ -157,7 +157,7 @@ public class VacuumdConfiguration implements Serializable {
 
     /**
      * Method enumerateStatement.
-     *
+     * 
      * @return an Enumeration over all possible elements of this collection
      */
     public Enumeration<Statement> enumerateStatement() {
@@ -166,7 +166,7 @@ public class VacuumdConfiguration implements Serializable {
 
     /**
      * Overrides the Object.equals method.
-     *
+     * 
      * @param obj
      * @return true if the objects are equal.
      */
@@ -219,7 +219,7 @@ public class VacuumdConfiguration implements Serializable {
 
     /**
      * Returns the value of field 'actionEvents'.
-     *
+     * 
      * @return the value of field 'ActionEvents'.
      */
     public ActionEvents getActionEvents() {
@@ -229,7 +229,7 @@ public class VacuumdConfiguration implements Serializable {
     /**
      * Returns the value of field 'actions'. The field 'actions' has the
      * following description: A collection of actions
-     *
+     * 
      * @return the value of field 'Actions'.
      */
     public Actions getActions() {
@@ -238,7 +238,7 @@ public class VacuumdConfiguration implements Serializable {
 
     /**
      * Returns the value of field 'autoEvents'.
-     *
+     * 
      * @return the value of field 'AutoEvents'.
      */
     public AutoEvents getAutoEvents() {
@@ -247,7 +247,7 @@ public class VacuumdConfiguration implements Serializable {
 
     /**
      * Returns the value of field 'automations'.
-     *
+     * 
      * @return the value of field 'Automations'.
      */
     public Automations getAutomations() {
@@ -257,7 +257,7 @@ public class VacuumdConfiguration implements Serializable {
     /**
      * Returns the value of field 'period'. The field 'period' has the
      * following description: how often to vacuum the database in seconds
-     *
+     * 
      * @return the value of field 'Period'.
      */
     public int getPeriod() {
@@ -266,7 +266,7 @@ public class VacuumdConfiguration implements Serializable {
 
     /**
      * Method getStatement.
-     *
+     * 
      * @param index
      * @throws IndexOutOfBoundsException
      *             if the index given is outside the bounds of the collection
@@ -291,7 +291,7 @@ public class VacuumdConfiguration implements Serializable {
      * thread, we pass a 0-length Array of the correct type into the API call.
      * This way we <i>know</i> that the Array returned is of exactly the
      * correct length.
-     *
+     * 
      * @return this collection as an Array
      */
     public Statement[] getStatement() {
@@ -302,7 +302,7 @@ public class VacuumdConfiguration implements Serializable {
     /**
      * Method getStatementCollection.Returns a reference to '_statementList'.
      * No type checking is performed on any modifications to the Vector.
-     *
+     * 
      * @return a reference to the Vector backing this class
      */
     public List<Statement> getStatementCollection() {
@@ -311,7 +311,7 @@ public class VacuumdConfiguration implements Serializable {
 
     /**
      * Method getStatementCount.
-     *
+     * 
      * @return the size of this collection
      */
     public int getStatementCount() {
@@ -321,7 +321,7 @@ public class VacuumdConfiguration implements Serializable {
     /**
      * Returns the value of field 'triggers'. The field 'triggers' has the
      * following description: A collection of triggers
-     *
+     * 
      * @return the value of field 'Triggers'.
      */
     public Triggers getTriggers() {
@@ -333,7 +333,7 @@ public class VacuumdConfiguration implements Serializable {
      * <p>
      * The following steps came from <b>Effective Java Programming Language
      * Guide</b> by Joshua Bloch, Chapter 3
-     *
+     * 
      * @return a hash code value for the object.
      */
     @Override
@@ -359,7 +359,7 @@ public class VacuumdConfiguration implements Serializable {
 
     /**
      * Method iterateStatement.
-     *
+     * 
      * @return an Iterator over all possible elements in this collection
      */
     public Iterator<Statement> iterateStatement() {
@@ -374,7 +374,7 @@ public class VacuumdConfiguration implements Serializable {
 
     /**
      * Method removeStatement.
-     *
+     * 
      * @param vStatement
      * @return true if the object was removed from the collection.
      */
@@ -385,7 +385,7 @@ public class VacuumdConfiguration implements Serializable {
 
     /**
      * Method removeStatementAt.
-     *
+     * 
      * @param index
      * @return the element removed from the collection
      */
@@ -396,7 +396,7 @@ public class VacuumdConfiguration implements Serializable {
 
     /**
      * Sets the value of field 'actionEvents'.
-     *
+     * 
      * @param actionEvents
      *            the value of field 'actionEvents'.
      */
@@ -407,7 +407,7 @@ public class VacuumdConfiguration implements Serializable {
     /**
      * Sets the value of field 'actions'. The field 'actions' has the
      * following description: A collection of actions
-     *
+     * 
      * @param actions
      *            the value of field 'actions'.
      */
@@ -417,7 +417,7 @@ public class VacuumdConfiguration implements Serializable {
 
     /**
      * Sets the value of field 'autoEvents'.
-     *
+     * 
      * @param autoEvents
      *            the value of field 'autoEvents'.
      */
@@ -427,7 +427,7 @@ public class VacuumdConfiguration implements Serializable {
 
     /**
      * Sets the value of field 'automations'.
-     *
+     * 
      * @param automations
      *            the value of field 'automations'.
      */
@@ -438,7 +438,7 @@ public class VacuumdConfiguration implements Serializable {
     /**
      * Sets the value of field 'period'. The field 'period' has the following
      * description: how often to vacuum the database in seconds
-     *
+     * 
      * @param period
      *            the value of field 'period'.
      */
@@ -447,8 +447,8 @@ public class VacuumdConfiguration implements Serializable {
     }
 
     /**
-     *
-     *
+     * 
+     * 
      * @param index
      * @param vStatement
      * @throws IndexOutOfBoundsException
@@ -467,8 +467,8 @@ public class VacuumdConfiguration implements Serializable {
     }
 
     /**
-     *
-     *
+     * 
+     * 
      * @param vStatementArray
      */
     public void setStatement(final Statement[] vStatementArray) {
@@ -483,7 +483,7 @@ public class VacuumdConfiguration implements Serializable {
     /**
      * Sets the value of '_statementList' by copying the given Vector. All
      * elements will be checked for type safety.
-     *
+     * 
      * @param vStatementList
      *            the Vector to copy.
      */
@@ -497,11 +497,113 @@ public class VacuumdConfiguration implements Serializable {
     /**
      * Sets the value of field 'triggers'. The field 'triggers' has the
      * following description: A collection of triggers
-     *
+     * 
      * @param triggers
      *            the value of field 'triggers'.
      */
     public void setTriggers(final Triggers triggers) {
         this._triggers = triggers;
+    }
+
+    /**
+     * Converts auto-events to action-events and statements to automations.
+     */
+    void afterUnmarshal(Unmarshaller unmarshaller, Object parent) {
+        // Convert auto-events to action-events
+        List<AutoEvent> autoEvents = _autoEvents.getAutoEventCollection();
+        for (Automation automation : _automations.getAutomationCollection()) {
+            if (automation.getAutoEventName() == null) {
+                continue;
+            }
+
+            // The automation references an auto-event, try and find it
+            AutoEvent matchedAutoEvent = null;
+            for (AutoEvent autoEvent : autoEvents) {
+                if (autoEvent.getName().equals(automation.getAutoEventName())) {
+                    matchedAutoEvent = autoEvent;
+                }
+            }
+
+            // No match, throw an exception
+            if (matchedAutoEvent == null) {
+                throw new IllegalStateException(
+                                                "An auto-event named '"
+                                                        + automation.getAutoEventName()
+                                                        + "' was referenced, but not found in the vacuumd configuration file.");
+            }
+
+            // Build an action event with the same uei
+            ActionEvent actionEvent = new ActionEvent();
+            actionEvent.setName(getAvailableName(matchedAutoEvent.getName(),
+                                                 _actionEvents.getActionEventCollection()));
+            actionEvent.setForEachResult(true);
+            actionEvent.addAssignment(new Assignment(
+                                                     "field",
+                                                     "uei",
+                                                     matchedAutoEvent.getUei().getContent()));
+            _actionEvents.addActionEvent(actionEvent);
+
+            // Update the automation to reference the action-event instead of the auto-event
+            automation.setAutoEventName(null);
+            automation.setActionEvent(actionEvent.getName());
+        }
+
+        // Erase the auto-events - there are no more automations referencing them
+        setAutoEvents(new AutoEvents());
+
+        // Convert statements to automations
+        for (Statement statement : getStatementCollection()) {
+            Action action = new Action();
+            action.setName(getAvailableName("statementAsAction", _actions.getActionCollection()));
+            action.setStatement(statement);
+            _actions.addAction(action);
+
+            Automation automation = new Automation();
+            
+            automation.setName(getAvailableName("statementAsAutomation", 
+                                                _automations.getAutomationCollection()));
+            automation.setInterval(getPeriod());
+            automation.setActive(true);
+            automation.setActionName(action.getName());
+            _automations.addAutomation(automation);
+        }
+
+        // Erase the statements - they are automations now
+        setStatement(new ArrayList<Statement>(0));
+    }
+
+    /**
+     * Finds a name that is currently used in the collection.
+     */
+    private <T extends Named> String getAvailableName(String hint, Collection<T> objects) {
+        int i = 1;
+        
+        if (hint == null) {
+            hint = "";
+        }
+
+        boolean isUnique;
+        String uniqueName = hint;
+        do {
+            isUnique = true;
+
+            Iterator<T> it = objects.iterator();
+            while (it.hasNext()) {
+                String name = it.next().getName();
+                if (name == null) {
+                    continue;
+                }
+
+                if (name.equalsIgnoreCase(uniqueName)) {
+                    isUnique = false;
+                }
+            }
+
+            if (!isUnique) {
+                uniqueName = hint + "-" + i++;
+            }
+        } while(isUnique == false);
+
+        return uniqueName;
     }
 }
