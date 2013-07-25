@@ -102,7 +102,7 @@ public class DistributedScheduler extends AbstractScheduler implements
     private static final Logger LOG = LoggerFactory.getLogger(DistributedScheduler.class);
 
     /**
-     * Constructs a new distributed schedulers.
+     * Constructs a new distributed scheduler.
      * 
      * @param name
      *            name of the scheduler
@@ -114,7 +114,7 @@ public class DistributedScheduler extends AbstractScheduler implements
     }
 
     /**
-     * Constructs a new distributed schedulers.
+     * Constructs a new distributed scheduler.
      * 
      * @param name
      *            name of the scheduler
