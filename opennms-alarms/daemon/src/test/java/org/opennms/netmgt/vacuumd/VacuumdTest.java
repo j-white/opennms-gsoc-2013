@@ -28,6 +28,8 @@
 
 package org.opennms.netmgt.vacuumd;
 
+import static com.jayway.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -42,6 +44,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import org.apache.commons.io.IOUtils;
 import org.junit.After;
@@ -56,6 +59,7 @@ import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
 import org.opennms.core.test.db.MockDatabase;
 import org.opennms.core.test.db.TemporaryDatabaseAware;
 import org.opennms.core.test.db.annotations.JUnitTemporaryDatabase;
+import org.opennms.core.test.grid.annotations.JUnitGrid;
 import org.opennms.core.utils.BeanUtils;
 import org.opennms.netmgt.EventConstants;
 import org.opennms.netmgt.alarmd.Alarmd;
@@ -70,6 +74,7 @@ import org.opennms.netmgt.mock.MockNode;
 import org.opennms.netmgt.model.OnmsNode;
 import org.opennms.netmgt.model.OnmsSeverity;
 import org.opennms.netmgt.model.events.EventBuilder;
+import org.opennms.netmgt.scheduler.Scheduler;
 import org.opennms.netmgt.xml.event.Event;
 import org.opennms.test.JUnitConfigurationEnvironment;
 import org.opennms.test.mock.MockUtil;
@@ -97,6 +102,7 @@ import org.springframework.test.context.ContextConfiguration;
 })
 @JUnitConfigurationEnvironment
 @JUnitTemporaryDatabase(dirtiesContext=false,tempDbClass=MockDatabase.class)
+@JUnitGrid
 public class VacuumdTest implements TemporaryDatabaseAware<MockDatabase>, InitializingBean {
     private static final long TEAR_DOWN_WAIT_MILLIS = 1000;
 
@@ -184,23 +190,20 @@ public class VacuumdTest implements TemporaryDatabaseAware<MockDatabase>, Initia
          */
         m_vacuumd.start();
         assertTrue(m_vacuumd.getStatus() >= 1);
-        Thread.sleep(200);
-        assertEquals(Fiber.RUNNING, m_vacuumd.getStatus());
-        assertEquals(Fiber.RUNNING, m_vacuumd.getScheduler().getStatus());
-        
+        await().until(getStatus(m_vacuumd), is(Fiber.RUNNING));
+        await().until(getStatus(m_vacuumd.getScheduler()), is(Fiber.RUNNING));
+
         /*
          * Testing the pause
          */
         m_vacuumd.pause();
-        Thread.sleep(200);
-        assertEquals(PausableFiber.PAUSED, m_vacuumd.getStatus());
-        assertEquals(PausableFiber.PAUSED, m_vacuumd.getScheduler().getStatus());
+        await().until(getStatus(m_vacuumd), is(PausableFiber.PAUSED));
+        await().until(getStatus(m_vacuumd.getScheduler()), is(PausableFiber.PAUSED));
 
         m_vacuumd.resume();
-        Thread.sleep(200);
-        assertEquals(PausableFiber.RUNNING, m_vacuumd.getStatus());
-        assertEquals(PausableFiber.RUNNING, m_vacuumd.getScheduler().getStatus());
-        
+        await().until(getStatus(m_vacuumd), is(PausableFiber.RUNNING));
+        await().until(getStatus(m_vacuumd.getScheduler()), is(PausableFiber.RUNNING));
+
         // Get an alarm in the DB
         bringNodeDownCreatingEvent(1);
         // There should be one node down alarm
@@ -225,6 +228,22 @@ public class VacuumdTest implements TemporaryDatabaseAware<MockDatabase>, Initia
         // Stop what you start
         m_vacuumd.stop();
         }
+    }
+
+    private Callable<Integer> getStatus(final PausableFiber fiber) {
+        return new Callable<Integer>() {
+            public Integer call() {
+                return fiber.getStatus();
+            }
+        };
+    }
+
+    private Callable<Integer> getStatus(final Scheduler scheduler) {
+        return new Callable<Integer>() {
+            public Integer call() {
+                return scheduler.getStatus();
+            }
+        };
     }
 
     @Test
