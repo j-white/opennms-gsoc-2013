@@ -46,7 +46,7 @@ import org.opennms.netmgt.daemon.AbstractServiceDaemon;
 import org.opennms.netmgt.model.events.EventBuilder;
 import org.opennms.netmgt.model.events.EventIpcManager;
 import org.opennms.netmgt.model.events.EventListener;
-import org.opennms.netmgt.scheduler.LegacyScheduler;
+import org.opennms.netmgt.scheduler.DistributedScheduler;
 import org.opennms.netmgt.scheduler.Scheduler;
 import org.opennms.netmgt.xml.event.Event;
 import org.opennms.netmgt.xml.event.Parm;
@@ -158,7 +158,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     private void createScheduler() {
         try {
             LOG.debug("init: Creating Vacuumd scheduler");
-            m_scheduler = new LegacyScheduler("Vacuumd", 2);
+            m_scheduler = new DistributedScheduler("Vacuumd", 2);
         } catch (RuntimeException e) {
             LOG.error("init: Failed to create Vacuumd scheduler", e);
             throw e;
