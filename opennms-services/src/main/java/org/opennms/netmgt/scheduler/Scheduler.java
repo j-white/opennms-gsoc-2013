@@ -29,76 +29,92 @@
 package org.opennms.netmgt.scheduler;
 
 /**
- * <p>Scheduler interface.</p>
- *
+ * <p>
+ * Scheduler interface.
+ * </p>
+ * 
  * @author ranger
  * @version $Id: $
  */
 public interface Scheduler extends ScheduleTimer {
 
-	/**
-	 * {@inheritDoc}
-	 *
-	 * This method is used to schedule a ready runnable in the system. The
-	 * interval is used as the key for determining which queue to add the
-	 * runnable.
-	 */
-        @Override
-	public abstract void schedule(long interval, final ReadyRunnable runnable);
+    /**
+     * {@inheritDoc}
+     * 
+     * This method is used to schedule a ready runnable in the system. The
+     * interval is used as the key for determining which queue to add the
+     * runnable.
+     */
+    @Override
+    public abstract void schedule(long interval, final ReadyRunnable runnable);
 
-	public abstract void schedule(long interval, final ReadyRunnable runnable, final boolean isReschedule);
+    /**
+     * This returns the current time for the scheduler
+     * 
+     * @return a long.
+     */
+    @Override
+    public abstract long getCurrentTime();
 
-	/**
-	 * This returns the current time for the scheduler
-	 *
-	 * @return a long.
-	 */
-        @Override
-	public abstract long getCurrentTime();
+    /**
+     * Starts the fiber.
+     * 
+     * @throws java.lang.IllegalStateException
+     *             Thrown if the fiber is already running.
+     */
+    public abstract void start();
 
-	/**
-	 * Starts the fiber.
-	 *
-	 * @throws java.lang.IllegalStateException
-	 *             Thrown if the fiber is already running.
-	 */
-	public abstract void start();
+    /**
+     * Stops the fiber. If the fiber has never been run then an exception is
+     * generated.
+     * 
+     * @throws java.lang.IllegalStateException
+     *             Throws if the fiber has never been started.
+     */
+    public abstract void stop();
 
-	/**
-	 * Stops the fiber. If the fiber has never been run then an exception is
-	 * generated.
-	 *
-	 * @throws java.lang.IllegalStateException
-	 *             Throws if the fiber has never been started.
-	 */
-	public abstract void stop();
+    /**
+     * Pauses the scheduler if it is current running. If the fiber has not
+     * been run or has already stopped then an exception is generated.
+     * 
+     * @throws java.lang.IllegalStateException
+     *             Throws if the operation could not be completed due to the
+     *             fiber's state.
+     */
+    public abstract void pause();
 
-	/**
-	 * Pauses the scheduler if it is current running. If the fiber has not been
-	 * run or has already stopped then an exception is generated.
-	 *
-	 * @throws java.lang.IllegalStateException
-	 *             Throws if the operation could not be completed due to the
-	 *             fiber's state.
-	 */
-	public abstract void pause();
+    /**
+     * Resumes the scheduler if it has been paused. If the fiber has not been
+     * run or has already stopped then an exception is generated.
+     * 
+     * @throws java.lang.IllegalStateException
+     *             Throws if the operation could not be completed due to the
+     *             fiber's state.
+     */
+    public abstract void resume();
 
-	/**
-	 * Resumes the scheduler if it has been paused. If the fiber has not been
-	 * run or has already stopped then an exception is generated.
-	 *
-	 * @throws java.lang.IllegalStateException
-	 *             Throws if the operation could not be completed due to the
-	 *             fiber's state.
-	 */
-	public abstract void resume();
+    /**
+     * Returns the current of this fiber.
+     * 
+     * @return The current status.
+     */
+    public abstract int getStatus();
 
-	/**
-	 * Returns the current of this fiber.
-	 *
-	 * @return The current status.
-	 */
-	public abstract int getStatus();
+    /**
+     * Returns total number of elements currently scheduled.
+     * 
+     * @return the sum of all the elements in the various queues
+     */
+    public int getScheduled();
+
+    /**
+     * Remove any queued tasks but allow any tasks that are currently
+     * executing to finish.
+     * 
+     * Tasks that are currently executing who use the Reschedulable interface
+     * will not be rescheduled (even if a reschedule is requested).
+     */
+    public void reset();
 
         /**
          * Returns the total number of scheduled tasks (ReadyRunnables) that have
@@ -107,4 +123,11 @@ public interface Scheduler extends ScheduleTimer {
          * @return the number of task executed
          */
         public abstract long getNumTasksExecuted();
+
+    /**
+     * Retrieves the current revision of the scheduler.
+     * 
+     * @return the current revision
+     */
+    public long getRevision();
 }

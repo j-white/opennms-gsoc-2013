@@ -28,23 +28,25 @@
 
 package org.opennms.netmgt.scheduler;
 
-import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.opennms.core.grid.DataGridProvider;
+public class ScheduleTimeKeeper implements ClusterRunnable, SchedulerAware, Timer {
+    private static final long serialVersionUID = 8488467368898905519L;
+    protected final long m_timeToRun;
+    protected final ReadyRunnable m_runnable;
+    protected final long m_schedulerRevision;
+    protected transient Scheduler m_scheduler;
 
-public class ScheduleTimeKeeper implements ClusterRunnable, Timer, DataGridProviderAware, Comparable<ScheduleTimeKeeper> {
-    private static final long serialVersionUID = 1073282881016278947L;
-    private final long m_timeToRun;
-    private final ReadyRunnable m_runnable;
-    private transient Set<ReadyRunnable> m_executingSet = null;
+    /**
+     * Logger.
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(ScheduleTimeKeeper.class);
 
-    public ScheduleTimeKeeper(final ReadyRunnable runnable, final long timeToRun) {
+    public ScheduleTimeKeeper(final ReadyRunnable runnable, final long timeToRun, final long schedulerRevision) {
         m_runnable = runnable;
         m_timeToRun = timeToRun;
-    }
-
-    public void removeFromSetAfterRun(final Set<ReadyRunnable> executingSet) {
-        m_executingSet = executingSet;
+        m_schedulerRevision = schedulerRevision;
     }
 
     @Override
@@ -55,8 +57,24 @@ public class ScheduleTimeKeeper implements ClusterRunnable, Timer, DataGridProvi
     @Override
     public void run() {
         m_runnable.run();
-        if (m_executingSet != null) {
-            m_executingSet.remove(this);
+        rescheduleIfRequested();
+    }
+
+    protected void rescheduleIfRequested() {
+        if (m_runnable instanceof Reschedulable) {
+            Reschedulable re = (Reschedulable) m_runnable;
+            if (!re.rescheduleAfterRun()) {
+                return;
+            }
+
+            if (m_schedulerRevision != m_scheduler.getRevision()) {
+                LOG.debug("A reschedule was requested for {}, but the scheduler has changed revisions from {} to {}",
+                    re, m_schedulerRevision, m_scheduler.getRevision());
+                return;
+            }
+
+            LOG.debug("Rescheduling {}.", re);
+            m_scheduler.schedule(re.getInterval(), m_runnable);
         }
     }
 
@@ -73,46 +91,9 @@ public class ScheduleTimeKeeper implements ClusterRunnable, Timer, DataGridProvi
 
     @Override
     public void setScheduler(Scheduler scheduler) {
+        m_scheduler = scheduler;
         if (m_runnable instanceof SchedulerAware) {
             ((SchedulerAware) m_runnable).setScheduler(scheduler);
         }
-    }
-
-    @Override
-    public void setDataGridProvider(DataGridProvider dataGridProvider) {
-        if (m_runnable instanceof DataGridProviderAware) {
-            ((DataGridProviderAware) m_runnable).setDataGridProvider(dataGridProvider);
-        }
-    }
-
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result
-                + ((m_runnable == null) ? 0 : m_runnable.hashCode());
-        return result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        ScheduleTimeKeeper other = (ScheduleTimeKeeper) obj;
-        if (m_runnable == null) {
-            if (other.m_runnable != null)
-                return false;
-        } else if (!m_runnable.equals(other.m_runnable))
-            return false;
-        return true;
-    }
-
-    @Override
-    public int compareTo(ScheduleTimeKeeper o) {
-        return Long.valueOf(o.m_timeToRun).compareTo(m_timeToRun);
     }
 }

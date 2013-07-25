@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 import org.exolab.castor.xml.MarshalException;
 import org.exolab.castor.xml.ValidationException;
@@ -68,7 +67,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     
     private static volatile Vacuumd m_singleton;
 
-    private volatile LegacyScheduler m_scheduler;
+    private volatile Scheduler m_scheduler;
 
     private volatile EventIpcManager m_eventMgr;
 
@@ -188,8 +187,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     private void scheduleAutomation(Automation auto) {
         if (auto.getActive()) {
             AutomationProcessor ap = new AutomationProcessor(auto);
-            ap.setScheduler(m_scheduler);
-            ap.schedule(false);
+            m_scheduler.schedule(ap.getInterval(), ap);
         }
     }
 
@@ -214,13 +212,12 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     /** {@inheritDoc} */
     @Override
     public void onEvent(Event event) {
-        
         if (isReloadConfigEvent(event)) {
-            handleReloadConifgEvent();
+            handleReloadConfigEvent();
         }
     }
 
-    private void handleReloadConifgEvent() {
+    private void handleReloadConfigEvent() {
         LOG.info("onEvent: reloading configuration...");
         
         EventBuilder ebldr = null;
@@ -228,12 +225,13 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
         try {
             LOG.debug("onEvent: Number of elements in schedule:{}; calling stop on scheduler...", m_scheduler.getScheduled());
             stop();
-            ExecutorService runner = m_scheduler.getRunner();
+            /*ExecutorService runner = m_scheduler.getRunner();
             while (!runner.isShutdown() || m_scheduler.getStatus() != STOPPED) {
                 LOG.debug("onEvent: waiting for scheduler to stop. Current status of scheduler: {}; Current status of runner: {}", m_scheduler.getStatus(), (runner.isTerminated() ? "TERMINATED" : (runner.isShutdown() ? "SHUTDOWN" : "RUNNING")));
                 Thread.sleep(500);
             }
             LOG.debug("onEvent: Current status of scheduler: {}; Current status of runner: {}", m_scheduler.getStatus(), (runner.isTerminated() ? "TERMINATED" : (runner.isShutdown() ? "SHUTDOWN" : "RUNNING")));
+            */
             LOG.debug("onEvent: Number of elements in schedule: {}", m_scheduler.getScheduled());
             LOG.debug("onEvent: reloading vacuumd configuration.");
 
@@ -253,12 +251,12 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
             ebldr = new EventBuilder(EventConstants.RELOAD_DAEMON_CONFIG_FAILED_UEI, getName());
             ebldr.addParam(EventConstants.PARM_DAEMON_NAME, "Vacuumd");
             ebldr.addParam(EventConstants.PARM_REASON, e.getLocalizedMessage().substring(0, 128));
-        } catch (InterruptedException e) {
+        } /* catch (InterruptedException e) {
             LOG.error("onEvent: Problem interrupting current Vacuumd Thread", e);
             ebldr = new EventBuilder(EventConstants.RELOAD_DAEMON_CONFIG_FAILED_UEI, getName());
             ebldr.addParam(EventConstants.PARM_DAEMON_NAME, "Vacuumd");
             ebldr.addParam(EventConstants.PARM_REASON, e.getLocalizedMessage().substring(0, 128));
-		}
+        }*/
         
         LOG.info("onEvent: completed configuration reload.");
         

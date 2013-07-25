@@ -160,4 +160,17 @@ public class MockScheduler implements Scheduler {
             boolean isReschedule) {
         schedule(interval, runnable);
     }
+
+    public int getScheduled() {
+        return m_scheduleEntries.size();
+    }
+
+    @Override
+    public void reset() {
+        m_scheduleEntries.clear();
+    }
+
+    public long getRevision() {
+        return 0L;
+    }
 }

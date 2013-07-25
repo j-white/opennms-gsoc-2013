@@ -52,7 +52,7 @@ import org.opennms.netmgt.config.vacuumd.Trigger;
 import org.opennms.netmgt.model.events.EventBuilder;
 import org.opennms.netmgt.model.events.Parameter;
 import org.opennms.netmgt.scheduler.ClusterRunnable;
-import org.opennms.netmgt.scheduler.Scheduler;
+import org.opennms.netmgt.scheduler.Reschedulable;
 import org.opennms.netmgt.xml.event.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +68,7 @@ import org.slf4j.LoggerFactory;
  * @author <a href="mailto:david@opennms.org">David Hustace</a>
  * @version $Id: $
  */
-public class AutomationProcessor implements ClusterRunnable {
+public class AutomationProcessor implements ClusterRunnable, Reschedulable {
     private static final long serialVersionUID = -1202762477153648616L;
 
     private static final Logger LOG = LoggerFactory.getLogger(AutomationProcessor.class);
@@ -77,8 +77,6 @@ public class AutomationProcessor implements ClusterRunnable {
     private transient TriggerProcessor m_trigger;
     private transient ActionProcessor m_action;
     private transient ActionEventProcessor m_actionEvent;
-
-    private transient Scheduler m_scheduler;
 
     static class TriggerProcessor {
     	private static final Logger LOG = LoggerFactory.getLogger(TriggerProcessor.class);
@@ -636,11 +634,6 @@ public class AutomationProcessor implements ClusterRunnable {
 
         LOG.debug("run: Finished automation {}, started at {}", m_automation.getName(), startDate);
         Vacuumd.getSingleton().incNumAutomationsRan();
-
-        // if the scheduler is set, automatically reschedule
-        if (m_scheduler != null) {
-            schedule(true);
-        }
     }
 
     /**
@@ -806,50 +799,21 @@ public class AutomationProcessor implements ClusterRunnable {
         return m_trigger.hasTrigger();
     }
 
-    @Override
-    public void setScheduler(Scheduler scheduler) {
-        m_scheduler = scheduler;
-    }
-
-    public Scheduler getScheduler() {
-        return m_scheduler;
-    }
-
-    public void schedule(boolean isReschedule) {
-        m_scheduler.schedule(m_automation.getInterval(), this, isReschedule);
-    }
-
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result
-                + ((m_automation == null) ? 0 : m_automation.hashCode());
-        return result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        AutomationProcessor other = (AutomationProcessor) obj;
-        if (m_automation == null) {
-            if (other.m_automation != null)
-                return false;
-        } else if (!m_automation.equals(other.m_automation))
-            return false;
-        return true;
-    }
-
     private void readObject(java.io.ObjectInputStream stream)
             throws java.io.IOException, ClassNotFoundException
     {
         stream.defaultReadObject();
         // Reload the transient fields from the configuration
         init();
+    }
+
+    @Override
+    public long getInterval() {
+        return m_automation.getInterval();
+    }
+
+    @Override
+    public boolean rescheduleAfterRun() {
+        return true;
     }
 }

@@ -31,17 +31,15 @@ package org.opennms.netmgt.scheduler;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 
 import org.opennms.core.concurrent.LogPreservingThreadFactory;
-import org.opennms.core.fiber.PausableFiber;
-import org.opennms.core.queue.FifoQueueImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.Assert;
 
 /**
  * This class implements a simple scheduler to ensure the polling occurs at
@@ -52,16 +50,14 @@ import org.springframework.util.Assert;
  * @author <a href="mailto:weave@oculan.com">Brian Weaver </a>
  * @author <a href="http://www.opennms.org/">OpenNMS </a>
  */
-public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
-    
-    private static final Logger LOG = LoggerFactory.getLogger(LegacyScheduler.class);
-    
+public class LegacyScheduler extends AbstractScheduler {
+
     /**
      * The map of queue that contain {@link ReadyRunnable ready runnable}
      * instances. The queues are mapped according to the interval of
      * scheduling.
      */
-    private Map<Long, PeekableFifoQueue<ReadyRunnable>> m_queues;
+    private Map<Long, BlockingQueue<ReadyRunnable>> m_queues;
 
     /**
      * The total number of elements currently scheduled. This should be the
@@ -70,14 +66,15 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
     private int m_scheduled;
 
     /**
-     * The pool of threads that are used to executed the runnable instances
-     * scheduled by the class' instance.
+     * The current revision.
      */
-    private ExecutorService m_runner;
+    private volatile long m_revision = 0;
 
     /**
-     * The status for this fiber.
+     * Logger.
      */
+    private static final Logger LOG = LoggerFactory.getLogger(LegacyScheduler.class);
+
     private int m_status;
 
     /**
@@ -130,9 +127,8 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
     public LegacyScheduler(final String parent, final int maxSize) {
         m_status = START_PENDING;
         m_runner = Executors.newFixedThreadPool(maxSize, new LogPreservingThreadFactory(parent, maxSize, false));
-        m_queues = new ConcurrentSkipListMap<Long, PeekableFifoQueue<ReadyRunnable>>();
+        m_queues = new ConcurrentSkipListMap<Long, BlockingQueue<ReadyRunnable>>();
         m_scheduled = 0;
-        m_worker = null;
     }
 
     /**
@@ -170,203 +166,43 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
      *             Thrown if an error occurs adding the element to the queue.
      */
     public synchronized void schedule(ReadyRunnable runnable, long interval) {
-        LOG.debug("schedule: Adding ready runnable {} at interval {}", runnable, interval);
+        LOG.debug("schedule: Adding ready runnable {} at interval {}",
+                  runnable, interval);
 
         Long key = Long.valueOf(interval);
         if (!m_queues.containsKey(key)) {
             LOG.debug("schedule: interval queue did not exist, a new one has been created");
-            m_queues.put(key, new PeekableFifoQueue<ReadyRunnable>());
+            m_queues.put(key, new LinkedBlockingQueue<ReadyRunnable>());
         }
 
-        try {
-            m_queues.get(key).add(runnable);
-            if (m_scheduled++ == 0) {
-                LOG.debug("schedule: queue element added, calling notify all since none were scheduled");
-                notifyAll();
-            } else {
-                LOG.debug("schedule: queue element added, notification not performed");
-            }
-        } catch (InterruptedException e) {
-            LOG.info("schedule: failed to add new ready runnable instance {} to scheduler", runnable, e);
-            Thread.currentThread().interrupt();
+        m_queues.get(key).add(runnable);
+        if (m_scheduled++ == 0) {
+            LOG.debug("schedule: queue element added, calling notify all since none were scheduled");
+            notifyAll();
+        } else {
+            LOG.debug("schedule: queue element added, notification not performed");
         }
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.opennms.netmgt.scheduler.Scheduler#schedule(long,
-     * org.opennms.netmgt.scheduler.ReadyRunnable)
-     */
     /** {@inheritDoc} */
     @Override
     public synchronized void schedule(long interval,
             final ReadyRunnable runnable) {
-        schedule(interval, runnable, false);
-    }
-
-    @Override
-    public synchronized void schedule(long interval, ReadyRunnable runnable,
-            boolean isReschedule) {
         final long timeToRun = getCurrentTime() + interval;
-        schedule(new ScheduleTimeKeeper(runnable, timeToRun), interval);
-    }
-    
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.opennms.netmgt.scheduler.Scheduler#getCurrentTime()
-     */
-    /**
-     * <p>
-     * getCurrentTime
-     * </p>
-     * 
-     * @return a long.
-     */
-    @Override
-    public long getCurrentTime() {
-        return System.currentTimeMillis();
+        schedule(new ScheduleTimeKeeper(runnable, timeToRun, getRevision()),
+                 interval);
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.opennms.netmgt.scheduler.Scheduler#start()
-     */
-    /**
-     * <p>
-     * start
-     * </p>
-     */
-    @Override
-    public synchronized void start() {
-        Assert.state(m_worker == null,
-                     "The fiber has already run or is running");
-
-        m_worker = new Thread(this, getName());
-        m_worker.start();
-        m_status = STARTING;
-
-        LOG.info("start: scheduler started");
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.opennms.netmgt.scheduler.Scheduler#stop()
-     */
-    /**
-     * <p>
-     * stop
-     * </p>
-     */
-    @Override
-    public synchronized void stop() {
-        Assert.state(m_worker != null, "The fiber has never been started");
-
-        m_status = STOP_PENDING;
-        m_worker.interrupt();
-        m_runner.shutdown();
-
-        LOG.info("stop: scheduler stopped");
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.opennms.netmgt.scheduler.Scheduler#pause()
-     */
-    /**
-     * <p>
-     * pause
-     * </p>
-     */
-    @Override
-    public synchronized void pause() {
-        Assert.state(m_worker != null, "The fiber has never been started");
-        Assert.state(m_status != STOPPED && m_status != STOP_PENDING,
-                     "The fiber is not running or a stop is pending");
-
-        if (m_status == PAUSED) {
-            return;
-        }
-
-        m_status = PAUSE_PENDING;
-        notifyAll();
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.opennms.netmgt.scheduler.Scheduler#resume()
-     */
-    /**
-     * <p>
-     * resume
-     * </p>
-     */
-    @Override
-    public synchronized void resume() {
-        Assert.state(m_worker != null, "The fiber has never been started");
-        Assert.state(m_status != STOPPED && m_status != STOP_PENDING,
-                     "The fiber is not running or a stop is pending");
-
-        if (m_status == RUNNING) {
-            return;
-        }
-
-        m_status = RESUME_PENDING;
-        notifyAll();
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.opennms.netmgt.scheduler.Scheduler#getStatus()
-     */
-    /**
-     * <p>
-     * getStatus
-     * </p>
-     * 
-     * @return a int.
-     */
-    @Override
-    public synchronized int getStatus() {
-        if (m_worker != null && m_worker.isAlive() == false) {
-            m_status = STOPPED;
-        }
-        return m_status;
-    }
-
-    /**
-     * Returns the name of this fiber.
-     * 
-     * @return a {@link java.lang.String} object.
-     */
+    /** {@inheritDoc} */
     @Override
     public String getName() {
         return m_runner.toString();
     }
 
-    /**
-     * Returns total number of elements currently scheduled.
-     * 
-     * @return the sum of all the elements in the various queues
-     */
+    /** {@inheritDoc} */
+    @Override
     public int getScheduled() {
         return m_scheduled;
-    }
-
-    /**
-     * Returns the pool of threads that are used to executed the runnable
-     * instances scheduled by the class' instance.
-     * 
-     * @return thread pool
-     */
-    public ExecutorService getRunner() {
-        return m_runner;
     }
 
     /**
@@ -392,7 +228,9 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
              * added to the queue it signals us to wakeup.
              */
             synchronized (this) {
-                if (m_status != RUNNING && m_status != PAUSED && m_status != PAUSE_PENDING && m_status != RESUME_PENDING) {
+                if (m_status != RUNNING && m_status != PAUSED
+                        && m_status != PAUSE_PENDING
+                        && m_status != RESUME_PENDING) {
                     LOG.debug("run: status = {}, time to exit", m_status);
                     break;
                 }
@@ -415,7 +253,7 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
 
                 if (m_status == RESUME_PENDING) {
                     LOG.debug("run: resuming.");
-                    
+
                     m_status = RUNNING;
                 }
 
@@ -440,7 +278,7 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
                  * Get an iterator so that we can cycle through the queue
                  * elements.
                  */
-                for (Entry<Long, PeekableFifoQueue<ReadyRunnable>> entry : m_queues.entrySet()) {
+                for (Entry<Long, BlockingQueue<ReadyRunnable>> entry : m_queues.entrySet()) {
                     /*
                      * Peak for Runnable objects until there are no more ready
                      * runnables.
@@ -449,14 +287,15 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
                      * a count then it would be possible to starve other
                      * queues.
                      */
-                    PeekableFifoQueue<ReadyRunnable> in = entry.getValue();
+                    BlockingQueue<ReadyRunnable> in = entry.getValue();
                     ReadyRunnable readyRun = null;
                     int maxLoops = in.size();
                     do {
                         try {
                             readyRun = in.peek();
                             if (readyRun != null && readyRun.isReady()) {
-                                LOG.debug("run: found ready runnable {}", readyRun);
+                                LOG.debug("run: found ready runnable {}",
+                                          readyRun);
 
                                 /*
                                  * Pop the interface/readyRunnable from the
@@ -477,8 +316,6 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
                                 // Increment the execution counter
                                 ++m_numTasksExecuted;
                             }
-                        } catch (InterruptedException e) {
-                            return; // jump all the way out
                         } catch (RejectedExecutionException e) {
                             throw new UndeclaredThrowableException(e);
                         }
@@ -509,7 +346,34 @@ public class LegacyScheduler implements Runnable, PausableFiber, Scheduler {
         synchronized (this) {
             m_status = STOPPED;
         }
+    }
 
+    /** {@inheritDoc} */
+    @Override
+    public long getRevision() {
+        return m_revision;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public synchronized void stop() {
+        m_revision++;
+        super.stop();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public synchronized void reset() {
+        // Prevent any queued tasks from being pushed to the executor
+        synchronized (m_queues) {
+            // Increment the revision - preventing any tasks from being
+            // rescheduled via the Reschedulable interface
+            m_revision++;
+
+            // Clear the queues
+            m_queues = new ConcurrentSkipListMap<Long, BlockingQueue<ReadyRunnable>>();
+            m_scheduled = 0;
+        }
     }
 
     /** {@inheritDoc} */

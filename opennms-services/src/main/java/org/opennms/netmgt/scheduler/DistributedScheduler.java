@@ -28,66 +28,32 @@
 
 package org.opennms.netmgt.scheduler;
 
+import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.locks.Lock;
 
 import org.opennms.core.concurrent.LogPreservingThreadFactory;
-import org.opennms.core.fiber.PausableFiber;
+import org.opennms.core.grid.AtomicLong;
 import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.grid.DataGridProviderFactory;
 import org.opennms.core.grid.DistributedExecutionVisitor;
 import org.opennms.core.grid.DistributedExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.Assert;
 
 /**
+ * Distributed scheduler that allows multiple instances with the same name to
+ * operate in unison.
+ * 
  * @author jwhite
  */
-public class DistributedScheduler implements PausableFiber, Scheduler,
-        Runnable, DistributedExecutionVisitor {
-    /**
-     * The map of priority queues that contain the scheduled tasks. The tasks
-     * are sorted by target execution time. The queues are mapped according to
-     * the interval of scheduling.
-     */
-    private Map<Long, PriorityQueue<ReadyRunnable>> m_queues;
-
-    /**
-     * Set of tasks that are either ready to be executed, or are currently
-     * being executed.
-     */
-    private Set<ReadyRunnable> m_executingSet;
-
-    /**
-     * The status for this fiber.
-     */
-    private int m_status;
-
-    /**
-     * The pool of threads that are used to executed the tasks.
-     */
-    private ExecutorService m_runner;
-
-    /**
-     * The worker.
-     */
-    private Thread m_worker;
-
-    /**
-     * Data grid provider.
-     */
-    private DataGridProvider m_dataGridProvider;
-
-    /**
-     * Distributed lock.
-     */
-    private Lock m_lock;
+public class DistributedScheduler extends AbstractScheduler implements
+        DistributedExecutionVisitor {
 
     /**
      * Unique name for this scheduler.
@@ -95,12 +61,38 @@ public class DistributedScheduler implements PausableFiber, Scheduler,
     private String m_schedulerName;
 
     /**
-     * Maximum size of the thread pool.
+     * Data grid provider.
      */
-    private int m_maxNumberOfThreadsInPool;
+    private DataGridProvider m_dataGridProvider;
 
     /**
-     * Prefix.
+     * Distributed lock used to coordinate among instance of the same
+     * scheduler.
+     */
+    private Lock m_lock;
+
+    /**
+     * Distributed set used to the store the ids of the queues.
+     */
+    private Set<QueueId> m_queueIds;
+
+    /**
+     * Distributed long used to identify the revision of the scheduler.
+     * 
+     * The revision is increased when a call to reset() is made in order to
+     * prevent any executing tasks from re-scheduling themselves via the
+     * Reschedulable interface. This logic is performed in the
+     * ScheduleTimeKeeper class.
+     */
+    private AtomicLong m_revision;
+
+    /**
+     * Map used to index the queues by interval.
+     */
+    private Map<Long, BlockingQueue<ReadyRunnable>> m_queues;
+
+    /**
+     * Prefix for distributed object keys.
      */
     public static final String SCHEDULER_GRID_NAME_PREFIX = "Scheduler.";
 
@@ -109,15 +101,32 @@ public class DistributedScheduler implements PausableFiber, Scheduler,
      */
     private static final Logger LOG = LoggerFactory.getLogger(DistributedScheduler.class);
 
+    /**
+     * Constructs a new distributed schedulers.
+     * 
+     * @param name
+     *            name of the scheduler
+     * @param maxSize
+     *            maximum number of threads per schedule instance
+     */
     public DistributedScheduler(String name, int maxSize) {
         this(name, maxSize, null);
     }
 
+    /**
+     * Constructs a new distributed schedulers.
+     * 
+     * @param name
+     *            name of the scheduler
+     * @param maxSize
+     *            maximum number of threads per schedule instance
+     * @param dataGridProvider
+     *            data grid provider
+     */
     public DistributedScheduler(String name, int maxSize,
             DataGridProvider dataGridProvider) {
         m_status = START_PENDING;
-        m_maxNumberOfThreadsInPool = maxSize;
-        m_worker = null;
+        m_queues = new HashMap<Long, BlockingQueue<ReadyRunnable>>();
 
         if (dataGridProvider == null) {
             m_dataGridProvider = DataGridProviderFactory.getInstance();
@@ -127,64 +136,78 @@ public class DistributedScheduler implements PausableFiber, Scheduler,
 
         // Initialize the distributed objects
         m_schedulerName = name;
-        m_queues = m_dataGridProvider.getMap(SCHEDULER_GRID_NAME_PREFIX
-                + m_schedulerName);
-        m_executingSet = m_dataGridProvider.getSet(SCHEDULER_GRID_NAME_PREFIX
-                + m_schedulerName);
+        m_revision = m_dataGridProvider.getAtomicLong(SCHEDULER_GRID_NAME_PREFIX
+                + m_schedulerName + "Revision");
         m_lock = m_dataGridProvider.getLock(SCHEDULER_GRID_NAME_PREFIX
-                + m_schedulerName);
+                + m_schedulerName + "Lock");
+        m_queueIds = m_dataGridProvider.getSet(SCHEDULER_GRID_NAME_PREFIX
+                + m_schedulerName + "Set");
+
+        // Populate our local map with the different queues
+        m_lock.lock();
+        try {
+            addMissingQueuesToLocalMap();
+        } finally {
+            m_lock.unlock();
+        }
+
+        // Initialize the distributed executor
+        ThreadFactory threadFactory = new LogPreservingThreadFactory(
+                                                                     getClass().getSimpleName(),
+                                                                     maxSize,
+                                                                     true);
+
+        LOG.debug("Creating distributed executor {} threads that uses a distributed queue named '{}'",
+                  maxSize, getExecutorQueueName());
+        m_runner = DistributedExecutors.newDistributedExecutor(maxSize,
+                                                               threadFactory,
+                                                               m_dataGridProvider,
+                                                               getExecutorQueueName(),
+                                                               this);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void schedule(final long interval, ReadyRunnable runnable) {
+        // Wrap the runnable in a time keeper and schedule it
+        final long timeToRun = getCurrentTime() + interval;
+        schedule(interval, new DistributedScheduleTimeKeeper(runnable,
+                                                             timeToRun,
+                                                             getRevision()));
     }
 
     /**
-     * This method is used to schedule a ready runnable in the system. The
-     * interval is used as the key for determining which queue to add the
-     * runnable.
+     * Schedules a runnable wrapped in a time keeper instance
      * 
-     * @param runnable
-     *            The element to run when interval expires.
      * @param interval
-     *            The queue to add the runnable to.
-     * @throws java.lang.RuntimeException
-     *             Thrown if an error occurs adding the element to the queue.
+     *            the queue to add the runnable to
+     * @param timeKeeper
+     *            wrapper for the runnable
      */
-    private void schedule(ReadyRunnable runnable, long interval,
-            boolean isReschedule) {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("schedule: Adding ready runnable " + runnable
-                    + " at interval " + interval);
-        }
+    private void schedule(final long interval,
+            final ScheduleTimeKeeper timeKeeper) {
+        LOG.debug("Adding ready runnable {} at interval {}", timeKeeper,
+                  interval);
 
         m_lock.lock();
         try {
-            for (PriorityQueue<ReadyRunnable> queue : m_queues.values()) {
-                if (queue.contains(runnable)) {
-                    LOG.debug("schedule: element already present in queue");
-                    return;
-                }
-            }
-
-            // TODO: Figure out why "contains" does not work instead
-            if (!isReschedule) {
-                for (ReadyRunnable runnableInExecutingState : m_executingSet) {
-                    if (runnableInExecutingState.equals(runnable)) {
-                        LOG.debug("schedule: element currently executing");
-                        return;
-                    }
-                }
-            }
-
-            Long key = Long.valueOf(interval);
-            PriorityQueue<ReadyRunnable> queue = m_queues.get(key);
+            Long queueInterval = Long.valueOf(interval);
+            BlockingQueue<ReadyRunnable> queue = m_queues.get(queueInterval);
             if (queue == null) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("schedule: interval queue did not exist, a new one has been created");
-                }
-                queue = new PriorityQueue<ReadyRunnable>();
+                // Create a new queue if none previously existed
+                QueueId queueId = new QueueId(m_schedulerName, queueInterval);
+                m_queueIds.add(queueId);
+
+                // Fetch the distributed queue from the grid provider
+                queue = m_dataGridProvider.getQueue(queueId.getId());
+                m_queues.put(queueInterval, queue);
+
+                LOG.debug("Interval queue did not exist, a new one has been created");
             }
 
-            queue.add(runnable);
-            m_queues.put(key, queue);
-            LOG.debug("schedule: queue element added");
+            // Add the element to the queue
+            queue.add(timeKeeper);
+            LOG.debug("Queue element added");
         } finally {
             m_lock.unlock();
         }
@@ -192,145 +215,18 @@ public class DistributedScheduler implements PausableFiber, Scheduler,
 
     /** {@inheritDoc} */
     @Override
-    public void schedule(final long interval, ReadyRunnable runnable) {
-        schedule(interval, runnable, false);
-    }
-
-    @Override
-    public void schedule(long interval, ReadyRunnable runnable,
-            boolean isReschedule) {
-        final long timeToRun = getCurrentTime() + interval;
-        schedule(new ScheduleTimeKeeper(runnable, timeToRun), interval,
-                 isReschedule);
-    }
-
-    /**
-     * <p>
-     * getCurrentTime
-     * </p>
-     * 
-     * @return a long.
-     */
-    @Override
-    public long getCurrentTime() {
-        return System.currentTimeMillis();
-    }
-
-    /**
-     * <p>
-     * start
-     * </p>
-     */
-    @Override
-    public synchronized void start() {
-        Assert.state(m_worker == null || m_status == STOPPED,
-                     "The fiber is already running or in the process of stopping");
-
-        String queueName = SCHEDULER_GRID_NAME_PREFIX + m_schedulerName;
-        ThreadFactory threadFactory = new LogPreservingThreadFactory(
-                                                                     getClass().getSimpleName(),
-                                                                     m_maxNumberOfThreadsInPool,
-                                                                     true);
-        
-        LOG.debug("Creating distributed executor {} threads that uses a distributed queue named '{}'",
-                  m_maxNumberOfThreadsInPool, queueName);
-        m_runner = DistributedExecutors.newDistributedExecutor(m_maxNumberOfThreadsInPool,
-                                                               threadFactory,
-                                                               m_dataGridProvider,
-                                                               queueName,
-                                                               this);
-
-        m_worker = new Thread(this, getName());
-        m_worker.start();
-        m_status = STARTING;
-
-        LOG.info("start: scheduler started");
-    }
-
-    /**
-     * <p>
-     * stop
-     * </p>
-     */
-    @Override
-    public synchronized void stop() {
-        Assert.state(m_worker != null, "The fiber has never been started");
-
-        m_status = STOP_PENDING;
-        m_worker.interrupt();
-        m_runner.shutdown();
-
-        LOG.info("stop: scheduler stopped");
-    }
-
-    /**
-     * <p>
-     * pause
-     * </p>
-     */
-    @Override
-    public synchronized void pause() {
-        Assert.state(m_worker != null, "The fiber has never been started");
-        Assert.state(m_status != STOPPED && m_status != STOP_PENDING,
-                     "The fiber is not running or a stop is pending");
-
-        if (m_status == PAUSED) {
-            return;
-        }
-
-        m_status = PAUSE_PENDING;
-        notifyAll();
-    }
-
-    /**
-     * <p>
-     * resume
-     * </p>
-     */
-    @Override
-    public synchronized void resume() {
-        Assert.state(m_worker != null, "The fiber has never been started");
-        Assert.state(m_status != STOPPED && m_status != STOP_PENDING,
-                     "The fiber is not running or a stop is pending");
-
-        if (m_status == RUNNING) {
-            return;
-        }
-
-        m_status = RESUME_PENDING;
-        notifyAll();
-    }
-
-    /**
-     * <p>
-     * getStatus
-     * </p>
-     * 
-     * @return a int.
-     */
-    @Override
-    public synchronized int getStatus() {
-        if (m_worker != null && m_worker.isAlive() == false) {
-            m_status = STOPPED;
-        }
-        return m_status;
-    }
-
-    @Override
     public String getName() {
         return m_schedulerName;
     }
 
-    /**
-     * Returns total number of tasks currently scheduled.
-     * 
-     * @return the sum of all the tasks in the various queues
-     */
-    public int getNumTasksScheduled() {
+    /** {@inheritDoc} */
+    @Override
+    public int getScheduled() {
         int numTasksScheduled = 0;
         m_lock.lock();
         try {
-            for (PriorityQueue<ReadyRunnable> queue : m_queues.values()) {
+            addMissingQueuesToLocalMap();
+            for (BlockingQueue<ReadyRunnable> queue : m_queues.values()) {
                 numTasksScheduled += queue.size();
             }
         } finally {
@@ -340,26 +236,17 @@ public class DistributedScheduler implements PausableFiber, Scheduler,
     }
 
     /**
-     * Returns the pool of threads that are used to executed the runnable
-     * instances scheduled by the class' instance.
-     * 
-     * @return thread pool
+     * The main method of the scheduler. This method is responsible for
+     * checking the runnable queues for ready objects and then enqueuing them
+     * into the thread pool for execution.
      */
-    public ExecutorService getRunner() {
-        return m_runner;
-    }
-
-    public DataGridProvider getDataGridProvider() {
-        return m_dataGridProvider;
-    }
-
     @Override
     public void run() {
         synchronized (this) {
             m_status = RUNNING;
         }
 
-        LOG.debug("run: scheduler running");
+        LOG.debug("Scheduler running");
 
         // Loop until a fatal exception occurs or until the thread is
         // interrupted.
@@ -369,10 +256,7 @@ public class DistributedScheduler implements PausableFiber, Scheduler,
                 if (m_status != RUNNING && m_status != PAUSED
                         && m_status != PAUSE_PENDING
                         && m_status != RESUME_PENDING) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("run: status = " + m_status
-                                + ", time to exit");
-                    }
+                    LOG.debug("run: status = {}, time to exit", m_status);
                     break;
                 }
 
@@ -402,38 +286,30 @@ public class DistributedScheduler implements PausableFiber, Scheduler,
             // at any time
             m_lock.lock();
             try {
+                // Retrieve any missing queues that might have been created on
+                // other nodes
+                addMissingQueuesToLocalMap();
+
                 // Iterate through the queues
-                for (Entry<Long, PriorityQueue<ReadyRunnable>> entry : m_queues.entrySet()) {
-                    PriorityQueue<ReadyRunnable> scheduleQueue = entry.getValue();
+                for (Entry<Long, BlockingQueue<ReadyRunnable>> entry : m_queues.entrySet()) {
+                    BlockingQueue<ReadyRunnable> scheduleQueue = entry.getValue();
 
                     ReadyRunnable readyRun = null;
-                    boolean didModifyScheduleQueue = false;
                     do {
                         readyRun = scheduleQueue.peek();
                         if (readyRun != null) {
                             if (readyRun.isReady()) {
-                                if (LOG.isDebugEnabled()) {
-                                    LOG.debug("run: pushing ready runnable "
-                                            + readyRun);
-                                }
+                                LOG.debug("run: pushing ready runnable {}",
+                                          readyRun);
 
                                 // Remove it from the scheduler queue
                                 scheduleQueue.remove();
-                                didModifyScheduleQueue = true;
-
-                                // Mark the task as executing
-                                m_executingSet.add(readyRun);
 
                                 // Add runnable to the executor queue
                                 m_runner.execute(readyRun);
                             }
                         }
                     } while (readyRun != null && readyRun.isReady());
-
-                    if (didModifyScheduleQueue) {
-                        // Push the updated queue back into the map
-                        m_queues.put(entry.getKey(), scheduleQueue);
-                    }
                 }
             } finally {
                 m_lock.unlock();
@@ -447,18 +323,20 @@ public class DistributedScheduler implements PausableFiber, Scheduler,
             }
         }
 
-        LOG.debug("run: scheduler exiting, state = STOPPED");
+        LOG.debug("Scheduler exiting, state = STOPPED");
         synchronized (this) {
             m_status = STOPPED;
         }
     }
 
+    /**
+     * Sets the required properties on the runnable if requested.
+     * 
+     * These properties are omitted until the runnable is about to execute
+     * (since we don't know where it will run.)
+     */
     @Override
     public void beforeExecute(Thread t, Runnable runnable) {
-        if (runnable instanceof ScheduleTimeKeeper) {
-            ((ScheduleTimeKeeper) runnable).removeFromSetAfterRun(m_executingSet);
-        }
-
         // Set the scheduler instance
         if (runnable instanceof SchedulerAware) {
             ((SchedulerAware) runnable).setScheduler(DistributedScheduler.this);
@@ -470,8 +348,131 @@ public class DistributedScheduler implements PausableFiber, Scheduler,
         }
     }
 
+    /**
+     * Unused, but required by the DistributedExecutionVisitor interface.
+     */
     @Override
     public void afterExecute(Runnable r, Throwable t) {
         // This method is intentionally left blank
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void reset() {
+        // Prevent any queued tasks from being pushed to the executor
+        m_lock.lock();
+        try {
+            // Remove any pending tasks from the executor queue
+            BlockingQueue<Runnable> workQueue = m_dataGridProvider.getQueue(getExecutorQueueName());
+            workQueue.clear();
+
+            // Increment the revision - preventing any tasks from being
+            // rescheduled via the Reschedulable interface
+            m_revision.incrementAndGet();
+
+            // Clear the queues
+            addMissingQueuesToLocalMap();
+            for (BlockingQueue<ReadyRunnable> queue : m_queues.values()) {
+                queue.clear();
+            }
+        } finally {
+            m_lock.unlock();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getRevision() {
+        return m_revision.get();
+    }
+
+    /**
+     * Adds any queues that have been created on other instances to the local
+     * queue map
+     */
+    private void addMissingQueuesToLocalMap() {
+        BlockingQueue<ReadyRunnable> queue;
+        for (QueueId queueId : m_queueIds) {
+            if (!m_queues.containsKey(queueId.getInterval())) {
+                queue = m_dataGridProvider.getQueue(queueId.getId());
+                m_queues.put(queueId.getInterval(), queue);
+            }
+        }
+    }
+
+    /**
+     * Returns the name of the distributed queue used by the executor for this
+     * scheduler.
+     * 
+     * @return distributed queue name
+     */
+    private String getExecutorQueueName() {
+        return SCHEDULER_GRID_NAME_PREFIX + m_schedulerName;
+    }
+
+    /**
+     * Tuple used to store the queue id and the queue interval in a set.
+     * 
+     * @author jwhite
+     */
+    private static class QueueId implements Serializable {
+        private static final long serialVersionUID = 2483527172361259087L;
+        private String m_schedulerName;
+        private Long m_queueInterval;
+
+        public QueueId(String schedulerName, Long queueInterval) {
+            m_schedulerName = schedulerName;
+            m_queueInterval = queueInterval;
+        }
+
+        public Long getInterval() {
+            return m_queueInterval;
+        }
+
+        public String getId() {
+            return String.format("%s%s-%d", SCHEDULER_GRID_NAME_PREFIX,
+                                 m_schedulerName, m_queueInterval);
+        }
+
+        public String toString() {
+            return getId();
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime
+                    * result
+                    + ((m_queueInterval == null) ? 0
+                                                : m_queueInterval.hashCode());
+            result = prime
+                    * result
+                    + ((m_schedulerName == null) ? 0
+                                                : m_schedulerName.hashCode());
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            QueueId other = (QueueId) obj;
+            if (m_queueInterval == null) {
+                if (other.m_queueInterval != null)
+                    return false;
+            } else if (!m_queueInterval.equals(other.m_queueInterval))
+                return false;
+            if (m_schedulerName == null) {
+                if (other.m_schedulerName != null)
+                    return false;
+            } else if (!m_schedulerName.equals(other.m_schedulerName))
+                return false;
+            return true;
+        }
     }
 }

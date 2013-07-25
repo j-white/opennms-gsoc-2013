@@ -10,6 +10,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.opennms.core.grid.AtomicLong;
 import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.grid.Member;
 import org.opennms.core.grid.MembershipListener;
@@ -81,5 +82,10 @@ public class MockDataGridProvider implements DataGridProvider {
     @Override
     public void removeMembershipListener(String registrationId) {
         // this method is intentionally left blank
+    }
+
+    @Override
+    public AtomicLong getAtomicLong(String name) {
+        return new MockAtomicLong();
     }
 }
