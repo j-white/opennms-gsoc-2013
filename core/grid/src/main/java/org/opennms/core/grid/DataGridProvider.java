@@ -29,6 +29,15 @@ public interface DataGridProvider {
     public void shutdown();
 
     /**
+     * Retrieves a distributed atomic long.
+     * 
+     * @param name
+     *            unique key that references this atomic long across the grid
+     * @return atomic long
+     */
+    public AtomicLong getAtomicLong(String name);
+
+    /**
      * Retrieves a distributed lock.
      * 
      * GOTCHAS: synchronized() doesn't work with these locks. You must use
@@ -49,7 +58,7 @@ public interface DataGridProvider {
      *            unique key that references this map across the grid
      * @return distributed map
      */
-    <K, V> Map<K, V> getMap(String name);
+    public <K, V> Map<K, V> getMap(String name);
 
     /**
      * Retrieves a distributed queue.
@@ -58,7 +67,7 @@ public interface DataGridProvider {
      *            unique key that references this queue across the grid
      * @return distributed queue
      */
-    <T> BlockingQueue<T> getQueue(String name);
+    public <T> BlockingQueue<T> getQueue(String name);
 
     /**
      * Retrieves a distributed set.
@@ -67,14 +76,14 @@ public interface DataGridProvider {
      *            unique key that references this set across the grid
      * @return distributed set
      */
-    <T> Set<T> getSet(String name);
+    public <T> Set<T> getSet(String name);
 
     /**
      * Returns the name of this grid provider instance.
      * 
      * @return name of this grid provider instance
      */
-    String getName();
+    public String getName();
 
     /**
      * Retrieves the member for this grid provider instance.

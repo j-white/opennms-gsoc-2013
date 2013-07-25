@@ -7,6 +7,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.Lock;
 
 import org.opennms.core.logging.Logging;
+import org.opennms.core.grid.AtomicLong;
 import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.grid.Member;
 import org.opennms.core.grid.MembershipListener;
@@ -50,6 +51,13 @@ public class HazelcastDataGridProvider implements DataGridProvider {
     @Override
     public void shutdown() {
         getHazelcastInstance().getLifecycleService().shutdown();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public AtomicLong getAtomicLong(String name) {
+        return new HazelcastAtomicLong(
+                                       getHazelcastInstance().getAtomicLong(name));
     }
 
     /** {@inheritDoc} */
