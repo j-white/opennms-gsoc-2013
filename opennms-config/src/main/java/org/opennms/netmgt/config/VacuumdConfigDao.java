@@ -7,7 +7,7 @@ import org.opennms.netmgt.config.vacuumd.ActionEvent;
 import org.opennms.netmgt.config.vacuumd.Automation;
 import org.opennms.netmgt.config.vacuumd.Trigger;
 
-public interface VacuumdConfigDao {
+public interface VacuumdConfigDao extends Gridable {
 
     /**
      * Returns a Collection of automations defined in the config

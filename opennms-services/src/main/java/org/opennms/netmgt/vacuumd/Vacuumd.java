@@ -33,11 +33,16 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.locks.Lock;
 
 import org.exolab.castor.xml.MarshalException;
 import org.exolab.castor.xml.ValidationException;
 import org.opennms.core.db.DataSourceFactory;
+import org.opennms.core.grid.DataGridProvider;
+import org.opennms.core.grid.DataGridProviderFactory;
 import org.opennms.netmgt.EventConstants;
+import org.opennms.netmgt.config.VacuumdConfigDao;
 import org.opennms.netmgt.config.VacuumdConfigFactory;
 import org.opennms.netmgt.config.vacuumd.Action;
 import org.opennms.netmgt.config.vacuumd.Automation;
@@ -65,6 +70,8 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(Vacuumd.class);
 
+    private static final String DAEMON_NAME = "vacuumd";
+
     private static volatile Vacuumd m_singleton;
 
     private volatile Scheduler m_scheduler;
@@ -72,6 +79,12 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     private volatile EventIpcManager m_eventMgr;
 
     private volatile long m_numAutomationsRan = 0;
+
+    private DataGridProvider m_dataGridProvider;
+
+    private Map<String, Object> m_sharedMap;
+
+    private Lock m_lock;
 
     /**
      * <p>
@@ -93,21 +106,40 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
      * </p>
      */
     public Vacuumd() {
-        super("vacuumd");
+        super(DAEMON_NAME);
     }
 
     /** {@inheritDoc} */
     @Override
     protected void onInit() {
         try {
-            LOG.info("Loading the configuration file.");
-            VacuumdConfigFactory.init();
+            if (m_dataGridProvider == null) {
+                m_dataGridProvider = DataGridProviderFactory.getInstance();
+            }
+            m_sharedMap = m_dataGridProvider.getMap(DAEMON_NAME + "Map");
+            m_lock = m_dataGridProvider.getLock(DAEMON_NAME + "Lock");
+
+            m_lock.lock();
+            try {
+                if (m_sharedMap.get("config") == null) {
+                    LOG.info("Loading the configuration file.");
+                    VacuumdConfigFactory.init();
+                    m_sharedMap.put("config",
+                                    VacuumdConfigFactory.getInstance());
+                } else {
+                    LOG.info("Using the existing configuration file.");
+                }
+            } finally {
+                m_lock.unlock();
+            }
+
             getEventManager().addEventListener(this,
                                                EventConstants.RELOAD_VACUUMD_CONFIG_UEI);
             getEventManager().addEventListener(this,
                                                EventConstants.RELOAD_DAEMON_CONFIG_UEI);
 
             initializeDataSources();
+
         } catch (Throwable ex) {
             LOG.error("Failed to load vacuumd configuration", ex);
             throw new UndeclaredThrowableException(ex);
@@ -157,10 +189,10 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
 
     private void createScheduler() {
         try {
-            LOG.debug("init: Creating Vacuumd scheduler");
-            m_scheduler = new DistributedScheduler("Vacuumd", 2);
+            LOG.debug("Creating Vacuumd scheduler");
+            m_scheduler = new DistributedScheduler(DAEMON_NAME, 2);
         } catch (RuntimeException e) {
-            LOG.error("init: Failed to create Vacuumd scheduler", e);
+            LOG.error("Failed to create Vacuumd scheduler", e);
             throw e;
         }
     }
@@ -177,8 +209,25 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     }
 
     private void scheduleAutomations() {
-        for (Automation auto : getVacuumdConfig().getAutomations()) {
-            scheduleAutomation(auto);
+        m_lock.lock();
+        try {
+            String currentConfigId = getVacuumdConfig().getUniqueId();
+            String activeConfigId = (String) m_sharedMap.get("configId");
+
+            LOG.debug("Current config hash: {} vs active config hash: {}",
+                      currentConfigId, activeConfigId);
+            if (!currentConfigId.equals(activeConfigId)) {
+                LOG.info("Scheduling {} automations.",
+                         getVacuumdConfig().getAutomations().size());
+                for (Automation auto : getVacuumdConfig().getAutomations()) {
+                    scheduleAutomation(auto);
+                }
+                m_sharedMap.put("configId", currentConfigId);
+            } else {
+                LOG.info("Automations are already scheduled.");
+            }
+        } finally {
+            m_lock.unlock();
         }
     }
 
@@ -238,6 +287,13 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
             LOG.debug("Reloading vacuumd configuration.");
             VacuumdConfigFactory.reload();
 
+            m_lock.lock();
+            try {
+                m_sharedMap.put("config", VacuumdConfigFactory.getInstance());
+            } finally {
+                m_lock.unlock();
+            }
+
             LOG.debug("Initializing the data sources...");
             initializeDataSources();
 
@@ -249,13 +305,13 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
             ebldr = new EventBuilder(
                                      EventConstants.RELOAD_DAEMON_CONFIG_SUCCESSFUL_UEI,
                                      getName());
-            ebldr.addParam(EventConstants.PARM_DAEMON_NAME, "Vacuumd");
+            ebldr.addParam(EventConstants.PARM_DAEMON_NAME, DAEMON_NAME);
         } catch (IOException e) {
             LOG.error("IO problem reading vacuumd configuration", e);
             ebldr = new EventBuilder(
                                      EventConstants.RELOAD_DAEMON_CONFIG_FAILED_UEI,
                                      getName());
-            ebldr.addParam(EventConstants.PARM_DAEMON_NAME, "Vacuumd");
+            ebldr.addParam(EventConstants.PARM_DAEMON_NAME, DAEMON_NAME);
             ebldr.addParam(EventConstants.PARM_REASON,
                            e.getLocalizedMessage().substring(0, 128));
         } catch (Throwable e) {
@@ -263,7 +319,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
             ebldr = new EventBuilder(
                                      EventConstants.RELOAD_DAEMON_CONFIG_FAILED_UEI,
                                      getName());
-            ebldr.addParam(EventConstants.PARM_DAEMON_NAME, "Vacuumd");
+            ebldr.addParam(EventConstants.PARM_DAEMON_NAME, DAEMON_NAME);
             ebldr.addParam(EventConstants.PARM_REASON,
                            e.getLocalizedMessage().substring(0, 128));
         }
@@ -283,7 +339,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
 
             for (Parm parm : parmCollection) {
                 if (EventConstants.PARM_DAEMON_NAME.equals(parm.getParmName())
-                        && "Vacuumd".equalsIgnoreCase(parm.getValue().getContent())) {
+                        && DAEMON_NAME.equalsIgnoreCase(parm.getValue().getContent())) {
                     isTarget = true;
                     break;
                 }
@@ -310,8 +366,8 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
         }
     }
 
-    private VacuumdConfigFactory getVacuumdConfig() {
-        return VacuumdConfigFactory.getInstance();
+    private VacuumdConfigDao getVacuumdConfig() {
+        return (VacuumdConfigDao) m_sharedMap.get("config");
     }
 
     public long getNumAutomationsRan() {
@@ -320,5 +376,13 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
 
     protected void incNumAutomationsRan() {
         m_numAutomationsRan++;
+    }
+
+    public void setDataGridProvider(DataGridProvider dataGridProvider) {
+        m_dataGridProvider = dataGridProvider;
+    }
+
+    public DataGridProvider getDataGridProvider() {
+        return m_dataGridProvider;
     }
 }

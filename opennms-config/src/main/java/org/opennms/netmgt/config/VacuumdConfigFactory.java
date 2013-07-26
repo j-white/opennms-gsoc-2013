@@ -64,12 +64,15 @@ import org.springframework.util.Assert;
  * @version $Id: $
  */
 public final class VacuumdConfigFactory implements VacuumdConfigDao {
+
     /**
      * The singleton instance of this factory
      */
     private static VacuumdConfigFactory m_singleton = null;
 
     private static boolean m_loadedFromFile = false;
+
+    private static final long serialVersionUID = 5695526138379612483L;
 
     /**
      * The config class loaded from the config file
@@ -161,7 +164,7 @@ public final class VacuumdConfigFactory implements VacuumdConfigDao {
      * @throws java.lang.IllegalStateException
      *             Thrown if the factory has not yet been initialized.
      */
-    public static synchronized VacuumdConfigFactory getInstance() {
+    public static synchronized VacuumdConfigDao getInstance() {
         Assert.state(m_singleton != null,
                      "The factory has not been initialized");
 
@@ -244,5 +247,11 @@ public final class VacuumdConfigFactory implements VacuumdConfigDao {
             }
         }
         return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public String getUniqueId() {
+        return HashUtils.getId(m_config);
     }
 }

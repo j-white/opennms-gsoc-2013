@@ -102,7 +102,7 @@ import org.springframework.test.context.ContextConfiguration;
 })
 @JUnitConfigurationEnvironment
 @JUnitTemporaryDatabase(dirtiesContext=false,tempDbClass=MockDatabase.class)
-@JUnitGrid
+@JUnitGrid(reuseGrid=true)
 public class VacuumdTest implements TemporaryDatabaseAware<MockDatabase>, InitializingBean {
     private static final long TEAR_DOWN_WAIT_MILLIS = 1000;
 
