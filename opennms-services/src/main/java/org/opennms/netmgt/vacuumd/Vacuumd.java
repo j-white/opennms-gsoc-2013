@@ -119,15 +119,17 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
             m_sharedMap = m_dataGridProvider.getMap(DAEMON_NAME + "Map");
             m_lock = m_dataGridProvider.getLock(DAEMON_NAME + "Lock");
 
+            LOG.info("Loading the configuration file.");
+            VacuumdConfigFactory.init();
+
             m_lock.lock();
             try {
                 if (m_sharedMap.get("config") == null) {
-                    LOG.info("Loading the configuration file.");
-                    VacuumdConfigFactory.init();
+                    LOG.info("Updating the configuration on the grid.");
                     m_sharedMap.put("config",
                                     VacuumdConfigFactory.getInstance());
                 } else {
-                    LOG.info("Using the existing configuration file.");
+                    LOG.info("Using the existing grid configuration.");
                 }
             } finally {
                 m_lock.unlock();
