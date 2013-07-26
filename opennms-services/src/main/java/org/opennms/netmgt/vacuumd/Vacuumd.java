@@ -356,11 +356,11 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
         return VacuumdConfigFactory.getInstance();
     }
 
-    public long getTotAutomationsRan() {
+    public long getNumAutomationsGlobal() {
         return m_scheduler.getGlobalTasksExecuted();
     }
 
-    public long getNumAutomationsRan() {
+    public long getNumAutomationsLocal() {
         return m_scheduler.getLocalTasksExecuted();
     }
 
