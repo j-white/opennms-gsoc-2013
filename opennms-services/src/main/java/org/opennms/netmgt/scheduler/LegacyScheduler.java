@@ -66,6 +66,11 @@ public class LegacyScheduler extends AbstractScheduler {
     private int m_scheduled;
 
     /**
+     * The total number of executed elements.
+     */
+    private long m_executed = 0;
+
+    /**
      * The current revision.
      */
     private volatile long m_revision = 0;
@@ -378,7 +383,13 @@ public class LegacyScheduler extends AbstractScheduler {
 
     /** {@inheritDoc} */
     @Override
-    public long getNumTasksExecuted() {
-        return m_numTasksExecuted;
+    public long getGlobalTasksExecuted() {
+        return getLocalTasksExecuted();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getLocalTasksExecuted() {
+	return m_numTasksExecuted;
     }
 }

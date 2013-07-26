@@ -38,6 +38,10 @@ package org.opennms.netmgt.scheduler;
  */
 public interface Scheduler extends ScheduleTimer {
 
+    /*
+     * Scheduling
+     */
+
     /**
      * {@inheritDoc}
      * 
@@ -55,6 +59,10 @@ public interface Scheduler extends ScheduleTimer {
      */
     @Override
     public abstract long getCurrentTime();
+
+    /*
+     * Life-cycle
+     */
 
     /**
      * Starts the fiber.
@@ -101,13 +109,6 @@ public interface Scheduler extends ScheduleTimer {
     public abstract int getStatus();
 
     /**
-     * Returns total number of elements currently scheduled.
-     * 
-     * @return the sum of all the elements in the various queues
-     */
-    public int getScheduled();
-
-    /**
      * Remove any queued tasks but allow any tasks that are currently
      * executing to finish.
      * 
@@ -130,4 +131,32 @@ public interface Scheduler extends ScheduleTimer {
      * @return the current revision
      */
     public long getRevision();
+
+    /*
+     * Statistics
+     */
+
+    /**
+     * Returns total number of elements currently scheduled.
+     * 
+     * @return the sum of all the elements in the various queues
+     */
+    public int getScheduled();
+
+    /**
+     * Returns total number of scheduled tasks that have been
+     * executed across all instances of this scheduler.
+     *
+     * @return the number of executed tasks
+     */
+    public long getGlobalTasksExecuted();
+
+    /**
+     * Returns total number of scheduled tasks that have been
+     * executed on this instance of the scheduler.
+     *
+     * @return the number of executed tasks
+     */
+    public long getLocalTasksExecuted();
+
 }

@@ -173,4 +173,14 @@ public class MockScheduler implements Scheduler {
     public long getRevision() {
         return 0L;
     }
+
+    @Override
+    public long getGlobalTasksExecuted() {
+        return getLocalTasksExecuted();
+    }
+
+    @Override
+    public long getLocalTasksExecuted() {
+        return 0;
+    }
 }

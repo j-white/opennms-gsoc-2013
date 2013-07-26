@@ -87,6 +87,18 @@ public class DistributedScheduler extends AbstractScheduler implements
     private AtomicLong m_revision;
 
     /**
+     * Distributed long used to keep track of the total number of tasks that
+     * have been executed globally;
+     */
+    private AtomicLong m_tasksExecutedGlobal;
+
+    /**
+     * Counter used to keep track of the number of tasks that have been
+     * executed locally.
+     */
+    private long m_tasksExecutedLocal = 0;
+
+    /**
      * Map used to index the queues by interval.
      */
     private Map<Long, BlockingQueue<ReadyRunnable>> m_queues;
@@ -138,6 +150,8 @@ public class DistributedScheduler extends AbstractScheduler implements
         m_schedulerName = name;
         m_revision = m_dataGridProvider.getAtomicLong(SCHEDULER_GRID_NAME_PREFIX
                 + m_schedulerName + "Revision");
+        m_tasksExecutedGlobal = m_dataGridProvider.getAtomicLong(SCHEDULER_GRID_NAME_PREFIX
+                + m_schedulerName + "Executed");
         m_lock = m_dataGridProvider.getLock(SCHEDULER_GRID_NAME_PREFIX
                 + m_schedulerName + "Lock");
         m_queueIds = m_dataGridProvider.getSet(SCHEDULER_GRID_NAME_PREFIX
@@ -349,11 +363,13 @@ public class DistributedScheduler extends AbstractScheduler implements
     }
 
     /**
-     * Unused, but required by the DistributedExecutionVisitor interface.
+     * Used to gather statistics.
      */
     @Override
     public void afterExecute(Runnable r, Throwable t) {
-        // This method is intentionally left blank
+        // Increment our local and global counters
+        m_tasksExecutedLocal++;
+        m_tasksExecutedGlobal.incrementAndGet();
     }
 
     /** {@inheritDoc} */
@@ -474,5 +490,17 @@ public class DistributedScheduler extends AbstractScheduler implements
                 return false;
             return true;
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getGlobalTasksExecuted() {
+        return m_tasksExecutedGlobal.get();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getLocalTasksExecuted() {
+        return m_tasksExecutedLocal;
     }
 }
