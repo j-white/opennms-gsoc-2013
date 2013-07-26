@@ -41,11 +41,16 @@ import org.opennms.netmgt.daemon.BaseOnmsMBean;
  */
 public interface VacuumdMBean extends BaseOnmsMBean {
     /**
-     * Returns the number of automations that have been executed so far (counter).
+     * Returns the total number of automations ran across all instances.
      *
-     * @return the number of automations that have been executed
+     * @return the total number of automations ran across all instances
      */
-    public long getNumAutomations();
+    public long getTotAutomationsRan();
 
+    /**
+     * Returns the number of automations ran on this particular instance.
+     *
+     * @return the number of automations ran on this particular instance
+     */
     public long getNumAutomationsRan();
 }

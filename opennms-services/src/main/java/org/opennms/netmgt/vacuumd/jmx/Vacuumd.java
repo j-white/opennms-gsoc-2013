@@ -140,6 +140,11 @@ public class Vacuumd implements VacuumdMBean {
     }
 
     @Override
+    public long getTotAutomationsRan() {
+        return getVacuumd().getTotAutomationsRan();
+    }
+
+    @Override
     public long getNumAutomationsRan() {
         return getVacuumd().getNumAutomationsRan();
     }

@@ -640,7 +640,6 @@ public class AutomationProcessor implements ClusterRunnable, Reschedulable {
         }
 
         LOG.debug("run: Finished automation {}, started at {}", m_automation.getName(), startDate);
-        Vacuumd.getSingleton().incNumAutomationsRan();
     }
 
     /**

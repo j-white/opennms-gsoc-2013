@@ -78,8 +78,6 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
 
     private volatile EventIpcManager m_eventMgr;
 
-    private volatile long m_numAutomationsRan = 0;
-
     private DataGridProvider m_dataGridProvider;
 
     private Map<String, Object> m_sharedMap;
@@ -358,12 +356,12 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
         return VacuumdConfigFactory.getInstance();
     }
 
-    public long getNumAutomationsRan() {
-        return m_numAutomationsRan;
+    public long getTotAutomationsRan() {
+        return m_scheduler.getGlobalTasksExecuted();
     }
 
-    protected void incNumAutomationsRan() {
-        m_numAutomationsRan++;
+    public long getNumAutomationsRan() {
+        return m_scheduler.getLocalTasksExecuted();
     }
 
     public void setDataGridProvider(DataGridProvider dataGridProvider) {
