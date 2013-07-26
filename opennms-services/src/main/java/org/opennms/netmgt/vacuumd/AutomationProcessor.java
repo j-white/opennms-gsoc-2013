@@ -28,6 +28,7 @@
 
 package org.opennms.netmgt.vacuumd;
 
+import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -74,12 +75,14 @@ public class AutomationProcessor implements ClusterRunnable, Reschedulable {
     private static final Logger LOG = LoggerFactory.getLogger(AutomationProcessor.class);
 
     private final Automation m_automation;
-    private transient TriggerProcessor m_trigger;
-    private transient ActionProcessor m_action;
-    private transient ActionEventProcessor m_actionEvent;
+    private final TriggerProcessor m_trigger;
+    private final ActionProcessor m_action;
+    private final ActionEventProcessor m_actionEvent;
 
-    static class TriggerProcessor {
-    	private static final Logger LOG = LoggerFactory.getLogger(TriggerProcessor.class);
+    static class TriggerProcessor implements Serializable {
+        private static final long serialVersionUID = -3548581500417624387L;
+
+        private static final Logger LOG = LoggerFactory.getLogger(TriggerProcessor.class);
 
     	private final Trigger m_trigger;
 
@@ -208,8 +211,11 @@ public class AutomationProcessor implements ClusterRunnable, Reschedulable {
         
     }
     
-    static class ActionProcessor {
-    	private static final Logger LOG = LoggerFactory.getLogger(ActionProcessor.class);
+    static class ActionProcessor implements Serializable {
+
+        private static final long serialVersionUID = 3290191277385983121L;
+
+        private static final Logger LOG = LoggerFactory.getLogger(ActionProcessor.class);
         
         private final String m_automationName;
         private final Action m_action;
@@ -445,8 +451,11 @@ public class AutomationProcessor implements ClusterRunnable, Reschedulable {
     }
 
     
-    static class EventAssignment {
-    	static final Pattern s_pattern = Pattern.compile("\\$\\{(\\w+)\\}");
+    static class EventAssignment implements Serializable {
+        
+        private static final long serialVersionUID = -2919182371983768052L;
+        
+        static final Pattern s_pattern = Pattern.compile("\\$\\{(\\w+)\\}");
         private final Assignment m_assignment;
 
         public EventAssignment(Assignment assignment) {
@@ -471,9 +480,11 @@ public class AutomationProcessor implements ClusterRunnable, Reschedulable {
         
     }
 
-    static class ActionEventProcessor {
+    static class ActionEventProcessor implements Serializable {
 
-    	private static final Logger LOG = LoggerFactory.getLogger(ActionEventProcessor.class);
+        private static final long serialVersionUID = 6971422147285746376L;
+
+        private static final Logger LOG = LoggerFactory.getLogger(ActionEventProcessor.class);
 
     	private final String m_automationName;
         private final ActionEvent m_actionEvent;
@@ -585,10 +596,6 @@ public class AutomationProcessor implements ClusterRunnable, Reschedulable {
      */
     public AutomationProcessor(Automation automation) {
         m_automation = automation;
-        init();
-    }
-
-    public void init() {
         m_trigger = new TriggerProcessor(m_automation.getName(), VacuumdConfigFactory.getInstance().getTrigger(m_automation.getTriggerName()));
         m_action = new ActionProcessor(m_automation.getName(), VacuumdConfigFactory.getInstance().getAction(m_automation.getActionName()));
         m_actionEvent = new ActionEventProcessor(m_automation.getName(),VacuumdConfigFactory.getInstance().getActionEvent(m_automation.getActionEvent()));
@@ -797,14 +804,6 @@ public class AutomationProcessor implements ClusterRunnable, Reschedulable {
 
     private boolean hasTrigger() {
         return m_trigger.hasTrigger();
-    }
-
-    private void readObject(java.io.ObjectInputStream stream)
-            throws java.io.IOException, ClassNotFoundException
-    {
-        stream.defaultReadObject();
-        // Reload the transient fields from the configuration
-        init();
     }
 
     @Override

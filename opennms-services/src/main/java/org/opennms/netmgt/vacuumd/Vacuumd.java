@@ -122,19 +122,6 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
             LOG.info("Loading the configuration file.");
             VacuumdConfigFactory.init();
 
-            m_lock.lock();
-            try {
-                if (m_sharedMap.get("config") == null) {
-                    LOG.info("Updating the configuration on the grid.");
-                    m_sharedMap.put("config",
-                                    VacuumdConfigFactory.getInstance());
-                } else {
-                    LOG.info("Using the existing grid configuration.");
-                }
-            } finally {
-                m_lock.unlock();
-            }
-
             getEventManager().addEventListener(this,
                                                EventConstants.RELOAD_VACUUMD_CONFIG_UEI);
             getEventManager().addEventListener(this,
@@ -150,7 +137,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
         LOG.info("Vacuumd initialization complete");
 
         createScheduler();
-        scheduleAutomations();
+        safelyScheduleAutomations();
     }
 
     private void initializeDataSources() throws MarshalException,
@@ -210,7 +197,10 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
         return m_scheduler;
     }
 
-    private void scheduleAutomations() {
+    /**
+     * Does not schedule the automations if another instance already has.
+     */
+    private void safelyScheduleAutomations() {
         m_lock.lock();
         try {
             String currentConfigId = getVacuumdConfig().getUniqueId();
@@ -219,17 +209,24 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
             LOG.debug("Current config hash: {} vs active config hash: {}",
                       currentConfigId, activeConfigId);
             if (!currentConfigId.equals(activeConfigId)) {
-                LOG.info("Scheduling {} automations.",
-                         getVacuumdConfig().getAutomations().size());
-                for (Automation auto : getVacuumdConfig().getAutomations()) {
-                    scheduleAutomation(auto);
-                }
+                LOG.debug("Resetting the scheduler.");
+                m_scheduler.reset();
+
+                scheduleAutomations();
                 m_sharedMap.put("configId", currentConfigId);
             } else {
                 LOG.info("Automations are already scheduled.");
             }
         } finally {
             m_lock.unlock();
+        }
+    }
+
+    private void scheduleAutomations() {
+        LOG.info("Scheduling {} automations.",
+                 getVacuumdConfig().getAutomations().size());
+        for (Automation auto : getVacuumdConfig().getAutomations()) {
+            scheduleAutomation(auto);
         }
     }
 
@@ -279,28 +276,17 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
         EventBuilder ebldr = null;
 
         try {
-            LOG.debug("Number of automations currently scheduled: {}",
-                      m_scheduler.getScheduled());
-            LOG.debug("Resetting the scheduler...");
-            m_scheduler.reset();
-
             LOG.debug("Number of elements currently scheduled: {}",
                       m_scheduler.getScheduled());
+
             LOG.debug("Reloading vacuumd configuration.");
             VacuumdConfigFactory.reload();
-
-            m_lock.lock();
-            try {
-                m_sharedMap.put("config", VacuumdConfigFactory.getInstance());
-            } finally {
-                m_lock.unlock();
-            }
 
             LOG.debug("Initializing the data sources...");
             initializeDataSources();
 
             LOG.debug("Rescheduling the automations...");
-            scheduleAutomations();
+            safelyScheduleAutomations();
 
             LOG.debug("Number of automations currently scheduled: {}",
                       m_scheduler.getScheduled());
@@ -369,7 +355,7 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     }
 
     private VacuumdConfigDao getVacuumdConfig() {
-        return (VacuumdConfigDao) m_sharedMap.get("config");
+        return VacuumdConfigFactory.getInstance();
     }
 
     public long getNumAutomationsRan() {
