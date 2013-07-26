@@ -721,4 +721,12 @@ public class Poller extends AbstractServiceDaemon {
     public static String getLoggingCategory() {
         return LOG4J_CATEGORY;
 	}
-}    
+
+    public long getNumPollsGlobal() {
+        return m_scheduler.getGlobalTasksExecuted();
+    }
+
+    public long getNumPollsLocal() {
+        return m_scheduler.getLocalTasksExecuted();
+    }
+}

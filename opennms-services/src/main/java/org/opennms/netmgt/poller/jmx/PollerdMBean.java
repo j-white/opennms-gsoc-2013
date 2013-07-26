@@ -38,9 +38,16 @@ import org.opennms.netmgt.daemon.BaseOnmsMBean;
  */
 public interface PollerdMBean extends BaseOnmsMBean {
     /**
-     * Returns the number of polls that have been executed so far (counter).
+     * Returns the total number of polls that have ran on all instances.
      *
-     * @return the number of polls that have been executed
+     * @return the total number of polls that have ran on all instances
      */
-    public long getNumPolls();
+    public long getNumPollsGlobal();
+
+    /**
+     * Returns the number of polls that have ran on this particular instance.
+     *
+     * @return the number of polls that have ran on this particular instance
+     */
+    public long getNumPollsLocal();
 }

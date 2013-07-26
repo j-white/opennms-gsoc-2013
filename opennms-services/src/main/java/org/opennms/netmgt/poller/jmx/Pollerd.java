@@ -52,7 +52,13 @@ public class Pollerd extends AbstractSpringContextJmxServiceDaemon<org.opennms.n
 
     /** {@inheritDoc} */
     @Override
-    public long getNumPolls() {
-        return getDaemon().getNumPolls();
+    public long getNumPollsGlobal() {
+        return getDaemon().getNumPollsGlobal();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getNumPollsLocal() {
+        return getDaemon().getNumPollsLocal();
     }
 }
