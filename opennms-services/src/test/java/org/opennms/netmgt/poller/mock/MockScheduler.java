@@ -35,6 +35,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.opennms.netmgt.scheduler.ReadyRunnable;
+import org.opennms.netmgt.scheduler.Reschedulable;
 import org.opennms.netmgt.scheduler.Scheduler;
 
 
@@ -99,14 +100,22 @@ public class MockScheduler implements Scheduler {
         
         Long nextTime = m_scheduleEntries.firstKey();
         List<ReadyRunnable> entries = m_scheduleEntries.get(nextTime);
-        Runnable runnable = entries.get(0);
+        ReadyRunnable runnable = entries.get(0);
         m_timer.setCurrentTime(nextTime.longValue());
         entries.remove(0);
         if (entries.isEmpty()) {
             m_scheduleEntries.remove(nextTime);
         }
         runnable.run();
-        m_numTasksExecuted++;
+
+        // Reschedule the task automatically if requested
+        if (runnable instanceof Reschedulable) {
+            Reschedulable reschedulable = (Reschedulable)runnable;
+            if (((Reschedulable) runnable).rescheduleAfterRun()) {
+                schedule(reschedulable.getInterval(), runnable);
+            }
+        }
+
         return getCurrentTime();
     }
     

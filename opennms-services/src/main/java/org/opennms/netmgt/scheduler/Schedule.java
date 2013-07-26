@@ -55,8 +55,9 @@ public class Schedule {
     private volatile boolean m_scheduled = false;
 	
     
-    class ScheduleEntry implements ReadyRunnable {
+    class ScheduleEntry implements ReadyRunnable, Reschedulable {
         private final int m_expirationCode;
+        private long m_intervalForReschedule;
 
         public ScheduleEntry(int expirationCode) {
             m_expirationCode = expirationCode;
@@ -80,32 +81,52 @@ public class Schedule {
                 LOG.debug("Schedule {} expired.  No need to run.", this);
                 return;
             }
-            
+
+            // Default to the parents interval
+            m_intervalForReschedule = m_interval.getInterval();
+
             if (!m_interval.scheduledSuspension()) {
                 try {
                     Schedule.this.run();
                 } catch (PostponeNecessary e) {
-				   // Chose a random number of seconds between 5 and 14 to wait before trying again
-                    m_timer.schedule(random.nextInt(10)*1000+5000, this);
-                    return;
+                    // Chose a random number of seconds between 5 and 14 to wait before trying again
+                    m_intervalForReschedule = random.nextInt(10)*1000+5000;
                 }
             }
-                
-
-            // if it is expired by the current run then don't reschedule
-            if (isExpired()) {
-                LOG.debug("Schedule {} expired.  No need to reschedule.", this);
-                return;
-            }
-            
-            long interval = m_interval.getInterval();
-            if (interval >= 0 && m_scheduled)
-                m_timer.schedule(interval, this);
-
         }
-        
+
         @Override
         public String toString() { return "ScheduleEntry[expCode="+m_expirationCode+"] for "+m_schedulable; }
+
+        /**
+         * Use the Reschedulable interface to perform rescheduling.
+         */
+        @Override
+        public boolean rescheduleAfterRun() {
+            // Determine whether or not we should reschedule
+            if (isExpired()) {
+                LOG.debug("Schedule {} expired. Will not reschedule.", this);
+                return false;
+            } else if (!m_scheduled) {
+                LOG.debug("Schedule {} no longer scheduled. Will not reschedule.", this);
+                return false;
+            } else if (m_intervalForReschedule < 0) {
+                LOG.debug("Schedule {} has negative interval {}. Will not reschedule.", this, m_intervalForReschedule);
+                return false;
+            }
+
+            // All checks passed, reschedule
+            LOG.debug("Schedule {} has been rescheduled in {}.", this, m_intervalForReschedule);
+            return true;
+        }
+
+        /**
+         * Return the interval determined in the run method.
+         */
+        @Override
+        public long getInterval() {
+            return m_intervalForReschedule;
+        }
     }
 
     /**
