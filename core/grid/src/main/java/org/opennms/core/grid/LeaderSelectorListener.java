@@ -26,7 +26,7 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.clusterd;
+package org.opennms.core.grid;
 
 /**
  * Used by the leader selector to notify the listener that he has become

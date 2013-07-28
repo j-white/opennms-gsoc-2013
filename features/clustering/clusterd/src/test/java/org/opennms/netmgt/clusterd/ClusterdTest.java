@@ -38,6 +38,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.opennms.core.test.MockLogAppender;
 import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
+import org.opennms.core.test.grid.MockLeaderSelector;
 import org.opennms.core.utils.BeanUtils;
 import org.opennms.netmgt.clusterd.Clusterd;
 import org.opennms.netmgt.config.ServiceConfigDao;
@@ -72,7 +73,7 @@ public class ClusterdTest {
     public void servicesAreStartedOnElect() throws InterruptedException {
         // The mock leader selector invokes the leader function immediately
         // when started
-        MockLeaderSelector mockLeaderSelector = new MockLeaderSelector(
+        MockLeaderSelector mockLeaderSelector = new MockLeaderSelector("test",
                                                                        m_clusterd);
         m_clusterd.setLeaderSelector(mockLeaderSelector);
 
@@ -121,7 +122,7 @@ public class ClusterdTest {
         long lockWaitThreshold = 1500; 
 
         // Wait the given delay
-        MockLeaderSelector mockLeaderSelector = new MockLeaderSelector(
+        MockLeaderSelector mockLeaderSelector = new MockLeaderSelector("test",
                                                                        m_clusterd,
                                                                        leaderElectionDelay);
         m_clusterd.setLeaderSelector(mockLeaderSelector);

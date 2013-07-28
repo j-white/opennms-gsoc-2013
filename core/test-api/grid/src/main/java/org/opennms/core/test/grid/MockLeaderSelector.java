@@ -26,10 +26,10 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.clusterd;
+package org.opennms.core.test.grid;
 
-import org.opennms.netmgt.clusterd.LeaderSelector;
-import org.opennms.netmgt.clusterd.LeaderSelectorListener;
+import org.opennms.core.grid.LeaderSelector;
+import org.opennms.core.grid.LeaderSelectorListener;
 
 /**
  * Mock leader selector which automatically grants
@@ -45,11 +45,12 @@ public class MockLeaderSelector extends LeaderSelector {
 
     private long m_msBeforeCall;
 
-    public MockLeaderSelector(LeaderSelectorListener listener) {
-        this(listener, 0);
+    public MockLeaderSelector(String id, LeaderSelectorListener listener) {
+        this(id, listener, 0);
     }
 
-    public MockLeaderSelector(LeaderSelectorListener listener, long msBeforeCall) {
+    public MockLeaderSelector(String id, LeaderSelectorListener listener, long msBeforeCall) {
+        super(id);
         setListener(listener);
         m_msBeforeCall = msBeforeCall;
     }

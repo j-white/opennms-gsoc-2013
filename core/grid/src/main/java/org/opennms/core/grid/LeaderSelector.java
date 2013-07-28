@@ -26,12 +26,10 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.clusterd;
+package org.opennms.core.grid;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
-
-import org.opennms.core.grid.DataGridProvider;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +55,11 @@ public class LeaderSelector implements Runnable {
     private LeaderSelectorListener m_listener = null;
 
     /**
+     * Unique ID for the shared lock.
+     */
+    private final String m_leaderLockId;
+
+    /**
      * Used to obtain the distributed lock.
      */
     @Autowired
@@ -79,28 +82,27 @@ public class LeaderSelector implements Runnable {
     public static final int LOCK_WAIT_MS = 500;
 
     /**
-     * Unique ID for the leader lock.
+     * Prefix for the shared lock.
      */
-    public static final String LEADER_LOCK_ID = "org.opennms.netmgt.clustering.LeaderSelector.LOCK";
+    public static final String LEADER_LOCK_ID_PREFIX = "org.opennms.core.grid.LeaderSelector.LOCK.";
 
     /**
      * Logger
      */
-    private static final Logger LOG = LoggerFactory.getLogger(Clusterd.class);
+    private static final Logger LOG = LoggerFactory.getLogger(LeaderSelector.class);
 
-    /**
-     * Default constructor.
-     */
-    public LeaderSelector() {
-        // This method is intentionally left blank
+    public LeaderSelector(String id) {
+        m_leaderLockId = LEADER_LOCK_ID_PREFIX + id;
     }
 
-    public LeaderSelector(LeaderSelectorListener listener) {
+    public LeaderSelector(String id, LeaderSelectorListener listener) {
+        m_leaderLockId = LEADER_LOCK_ID_PREFIX + id;
         setListener(listener);
     }
 
-    public LeaderSelector(LeaderSelectorListener listener,
+    public LeaderSelector(String id, LeaderSelectorListener listener,
             DataGridProvider dataGridProvider) {
+        m_leaderLockId = LEADER_LOCK_ID_PREFIX + id;
         setListener(listener);
         setDataGridProvider(dataGridProvider);
     }
@@ -122,8 +124,8 @@ public class LeaderSelector implements Runnable {
 
     @Override
     public void run() {
-        LOG.debug("Using distributed lock from {}.", m_dataGridProvider);
-        Lock lock = m_dataGridProvider.getLock(LEADER_LOCK_ID);
+        LOG.debug("Using distributed lock called {} from {}.", m_leaderLockId, m_dataGridProvider);
+        Lock lock = m_dataGridProvider.getLock(m_leaderLockId);
 
         LOG.debug("Waiting for leader lock...");
         while (true) {

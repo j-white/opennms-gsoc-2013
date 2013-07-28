@@ -26,7 +26,7 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.clusterd;
+package org.opennms.core.test.grid;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,11 +37,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.opennms.core.grid.DataGridProvider;
+import org.opennms.core.grid.LeaderSelector;
+import org.opennms.core.grid.LeaderSelectorListener;
 import org.opennms.core.test.MockLogAppender;
 import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
 import org.opennms.core.test.grid.annotations.JUnitGrid;
-import org.opennms.netmgt.clusterd.LeaderSelector;
-import org.opennms.netmgt.clusterd.LeaderSelectorListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -94,7 +94,7 @@ public class LeaderSelectorIntegrationTest implements InitializingBean {
 
     @After
     public void tearDown() throws Exception {
-        MockLogAppender.assertNoWarningsOrGreater();
+        MockLogAppender.assertNoErrorOrGreater();
     }
 
     /**
@@ -112,7 +112,7 @@ public class LeaderSelectorIntegrationTest implements InitializingBean {
 
         public ClusterClient(String id) {
             m_id = id;
-            m_leaderSelector = new LeaderSelector(this, m_dataGridProvider);
+            m_leaderSelector = new LeaderSelector("test", this, m_dataGridProvider);
         }
 
         public void start() {

@@ -16,7 +16,8 @@
     	<property name="leaderSelector" ref="clusterdLeaderSelector" />
     </bean>
 
-	<bean id="clusterdLeaderSelector" class="org.opennms.netmgt.clusterd.LeaderSelector">
+	<bean id="clusterdLeaderSelector" class="org.opennms.core.grid.LeaderSelector">
+		<constructor-arg value="clusterd"/>
 		<property name="listener" ref="daemon" />
 	</bean>
 </beans>

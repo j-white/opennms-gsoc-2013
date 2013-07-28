@@ -32,6 +32,8 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.opennms.core.grid.LeaderSelector;
+import org.opennms.core.grid.LeaderSelectorListener;
 import org.opennms.netmgt.config.ServiceConfigDao;
 import org.opennms.netmgt.config.ServiceConfigFactory;
 import org.opennms.netmgt.config.service.Service;
