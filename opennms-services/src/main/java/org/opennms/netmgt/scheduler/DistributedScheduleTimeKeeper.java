@@ -29,6 +29,7 @@
 package org.opennms.netmgt.scheduler;
 
 import org.opennms.core.grid.DataGridProvider;
+import org.opennms.core.grid.DataGridProviderAware;
 
 public class DistributedScheduleTimeKeeper extends ScheduleTimeKeeper
         implements ClusterRunnable, DataGridProviderAware,

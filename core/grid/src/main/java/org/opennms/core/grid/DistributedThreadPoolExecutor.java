@@ -1,33 +1,51 @@
 package org.opennms.core.grid;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * TODO: Prevent data from accumulating in the future map.
+ *
+ * @author jwhite
+ */
 public class DistributedThreadPoolExecutor extends ThreadPoolExecutor {
 
     private BlockingQueue<Runnable> m_workQueue;
     private DistributedExecutionVisitor m_visitor;
+    private DataGridProvider m_dataGridProvider;
+    private String m_name;
     private boolean fairPolicy = true;
 
     public DistributedThreadPoolExecutor(int nThreads,
-            ThreadFactory threadFactory, BlockingQueue<Runnable> workQueue) {
+            ThreadFactory threadFactory, DataGridProvider dataGridProvider,
+            String name, BlockingQueue<Runnable> workQueue) {
         super(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, workQueue,
               threadFactory);
-        init(workQueue, null);
+        init(dataGridProvider, name, workQueue, null);
     }
 
     public DistributedThreadPoolExecutor(int nThreads,
-            ThreadFactory threadFactory, BlockingQueue<Runnable> workQueue,
+            ThreadFactory threadFactory, DataGridProvider dataGridProvider,
+            String name, BlockingQueue<Runnable> workQueue,
             DistributedExecutionVisitor visitor) {
         super(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, workQueue,
               threadFactory);
-        init(workQueue, visitor);
+        init(dataGridProvider, name, workQueue, visitor);
     }
 
-    private void init(BlockingQueue<Runnable> workQueue,
+    public static String getQueueName(String name) {
+        return name + ".Queue";
+    }
+
+    private void init(DataGridProvider dataGridProvider, String name,
+            BlockingQueue<Runnable> workQueue,
             DistributedExecutionVisitor visitor) {
+        m_dataGridProvider = dataGridProvider;
+        m_name = name;
         m_workQueue = workQueue;
         m_visitor = visitor;
 
@@ -49,9 +67,23 @@ public class DistributedThreadPoolExecutor extends ThreadPoolExecutor {
         }
     }
 
+    protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
+        return new DistributedFutureTask<T>(runnable, value, m_dataGridProvider, m_name + ".Futures");
+    }
+
+    protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
+        return new DistributedFutureTask<T>(callable, m_dataGridProvider, m_name + ".Futures");
+    }
+
     @Override
     protected void beforeExecute(Thread t, Runnable r) {
         super.beforeExecute(t, r);
+
+        // Set the data grid instance
+        if (r instanceof DataGridProviderAware) {
+            ((DataGridProviderAware) r).setDataGridProvider(m_dataGridProvider);
+        }
+        
         if (m_visitor != null) {
             m_visitor.beforeExecute(t, r);
         }

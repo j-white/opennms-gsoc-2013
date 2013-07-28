@@ -46,13 +46,13 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.opennms.core.fiber.Fiber;
 import org.opennms.core.grid.DataGridProvider;
+import org.opennms.core.grid.DataGridProviderAware;
 import org.opennms.core.grid.DataGridProviderFactory;
 import org.opennms.core.test.MockLogAppender;
 import org.opennms.core.test.MockLogger;
 import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
 import org.opennms.core.test.grid.annotations.JUnitGrid;
 import org.opennms.netmgt.scheduler.ClusterRunnable;
-import org.opennms.netmgt.scheduler.DataGridProviderAware;
 import org.opennms.netmgt.scheduler.DistributedScheduler;
 import org.springframework.test.context.ContextConfiguration;
 

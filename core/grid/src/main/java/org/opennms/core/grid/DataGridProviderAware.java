@@ -1,6 +1,4 @@
-package org.opennms.netmgt.scheduler;
-
-import org.opennms.core.grid.DataGridProvider;
+package org.opennms.core.grid;
 
 public interface DataGridProviderAware {
     public void setDataGridProvider(DataGridProvider dataGridProvider);

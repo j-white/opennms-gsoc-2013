@@ -43,6 +43,7 @@ import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.grid.DataGridProviderFactory;
 import org.opennms.core.grid.DistributedExecutionVisitor;
 import org.opennms.core.grid.DistributedExecutors;
+import org.opennms.core.grid.DistributedThreadPoolExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -171,12 +172,12 @@ public class DistributedScheduler extends AbstractScheduler implements
                                                                      maxSize,
                                                                      true);
 
-        LOG.debug("Creating distributed executor {} threads that uses a distributed queue named '{}'",
-                  maxSize, getExecutorQueueName());
+        LOG.debug("Creating distributed executor called {} with {} threads",
+                  getExecutorName(), maxSize);
         m_runner = DistributedExecutors.newDistributedExecutor(maxSize,
                                                                threadFactory,
                                                                m_dataGridProvider,
-                                                               getExecutorQueueName(),
+                                                               getExecutorName(),
                                                                this);
     }
 
@@ -355,11 +356,6 @@ public class DistributedScheduler extends AbstractScheduler implements
         if (runnable instanceof SchedulerAware) {
             ((SchedulerAware) runnable).setScheduler(DistributedScheduler.this);
         }
-
-        // Set the data grid instance
-        if (runnable instanceof DataGridProviderAware) {
-            ((DataGridProviderAware) runnable).setDataGridProvider(m_dataGridProvider);
-        }
     }
 
     /**
@@ -422,8 +418,12 @@ public class DistributedScheduler extends AbstractScheduler implements
      * 
      * @return distributed queue name
      */
+    private String getExecutorName() {
+        return SCHEDULER_GRID_NAME_PREFIX + m_schedulerName + ".Executor";
+    }
+
     private String getExecutorQueueName() {
-        return SCHEDULER_GRID_NAME_PREFIX + m_schedulerName;
+        return DistributedThreadPoolExecutor.getQueueName(getExecutorName());
     }
 
     /**
