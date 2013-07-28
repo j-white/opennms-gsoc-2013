@@ -28,6 +28,7 @@
 
 package org.opennms.netmgt.scheduler;
 
+import java.io.Serializable;
 import java.util.Random;
 
 import org.slf4j.Logger;
@@ -40,22 +41,22 @@ import org.slf4j.LoggerFactory;
  * @author brozow
  * @version $Id: $
  */
-public class Schedule {
-    
-    
+public class Schedule implements Serializable {
+
+    private static final long serialVersionUID = 625752714440790084L;
+
     private static final Logger LOG = LoggerFactory.getLogger(Schedule.class);
 
-	/** Constant <code>random</code> */
-	private static final Random random = new Random();
-	
+    /** Constant <code>random</code> */
+    private static final Random random = new Random();
     private final ReadyRunnable m_schedulable;
     private final ScheduleInterval m_interval;
-    private final ScheduleTimer m_timer;
+    private transient ScheduleTimer m_timer;
     private volatile int m_currentExpirationCode;
     private volatile boolean m_scheduled = false;
-	
-    
-    class ScheduleEntry implements ReadyRunnable, Reschedulable {
+
+    private class ScheduleEntry implements ClusterRunnable, Reschedulable, SchedulerAware {
+        private static final long serialVersionUID = -5278243900171236605L;
         private final int m_expirationCode;
         private long m_intervalForReschedule;
 
@@ -126,6 +127,14 @@ public class Schedule {
         @Override
         public long getInterval() {
             return m_intervalForReschedule;
+        }
+
+        /**
+         * Updates the instance of the scheduler.
+         */
+        @Override
+        public void setScheduler(Scheduler scheduler) {
+            m_timer = scheduler;
         }
     }
 
