@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Required;
+import org.springframework.util.Assert;
 
 /**
  * This class is used to help select a leader amongst the cluster members:
@@ -108,8 +109,9 @@ public class LeaderSelector implements Runnable {
     }
 
     public void start() {
-        assert (m_dataGridProvider != null);
-        assert (m_listener != null);
+        Assert.isTrue(m_listener != null, "Listener not set");
+        Assert.isTrue(m_dataGridProvider != null, "Data grid provider not set");
+
         m_stopped = false;
         Thread m_thread = new Thread(this);
         m_thread.start();
