@@ -61,7 +61,7 @@ public class DistributedFutureTask<T> implements RunnableFuture<T>,
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        throw new UnsupportedOperationException();
+        return false;
     }
 
     @Override
