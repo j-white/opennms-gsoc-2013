@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory;
  * @author <A HREF="http://www.opennms.org/">OpenNMS</A>
  */
 abstract public class AbstractServiceMonitor implements ServiceMonitor {
-	
+    private static final long serialVersionUID = -4592728602506915894L;
     private static final Logger LOG = LoggerFactory.getLogger(AbstractServiceMonitor.class);
 	
     /**

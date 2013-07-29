@@ -47,9 +47,18 @@ import org.slf4j.LoggerFactory;
  * @version $Id: $
  */
 public class MockNetwork extends MockContainer<MockContainer<?,?>,MockElement> {
-	
-	private static final Logger LOG = LoggerFactory.getLogger(MockNetwork.class);
+    
+    private static final Logger LOG = LoggerFactory.getLogger(MockNetwork.class);
 
+    private static MockNetwork m_singleton = null;
+
+    public static synchronized void setMockNetwork(MockNetwork mockNetwork) {
+        m_singleton = mockNetwork;
+    }
+
+    public static synchronized MockNetwork getMockNetwork() {
+        return m_singleton;
+    }
 
     /**
      * <p>createDownEvent</p>

@@ -35,6 +35,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.sql.DataSource;
@@ -69,13 +70,11 @@ import org.slf4j.LoggerFactory;
  * @author ranger
  * @version $Id: $
  */
-public class Poller extends AbstractServiceDaemon {
+public abstract class Poller extends AbstractServiceDaemon {
     
     private final static Logger LOG = LoggerFactory.getLogger(Poller.class);
 
-    private final static String LOG4J_CATEGORY = "poller";
-
-    private final static Poller m_singleton = new Poller();
+    protected final static String LOG4J_CATEGORY = "poller";
 
     private boolean m_initialized = false;
 
@@ -98,7 +97,7 @@ public class Poller extends AbstractServiceDaemon {
     /**
      * <p>Constructor for Poller.</p>
      */
-    public Poller() {
+    protected Poller() {
         super(LOG4J_CATEGORY);
     }
 
@@ -418,14 +417,6 @@ public class Poller extends AbstractServiceDaemon {
 		getScheduler().resume();
 	}
 
-    /**
-     * <p>getInstance</p>
-     *
-     * @return a {@link org.opennms.netmgt.poller.Poller} object.
-     */
-    public static Poller getInstance() {
-        return m_singleton;
-    }
 
     /**
      * <p>getServiceMonitor</p>
@@ -544,6 +535,8 @@ public class Poller extends AbstractServiceDaemon {
         
     }
 
+    public abstract ExecutorService getExecutor();
+
     private boolean scheduleService(int nodeId, String nodeLabel, String ipAddr, String serviceName, boolean active, Number svcLostEventId, Date date, String svcLostUei) {
         // We don't want to adjust the management state of the service if we're
         // on a machine that uses multiple servers with access to the same database
@@ -575,7 +568,7 @@ public class Poller extends AbstractServiceDaemon {
         }
         
         PollableService svc = getNetwork().createService(nodeId, nodeLabel, addr, serviceName);
-        PollableServiceConfig pollConfig = new PollableServiceConfig(svc, m_pollerConfig, m_pollOutagesConfig, pkg, getScheduler());
+        PollableServiceConfig pollConfig = new PollableServiceConfig(svc, m_pollerConfig, m_pollOutagesConfig, pkg, getScheduler(), getExecutor());
         svc.setPollConfig(pollConfig);
         synchronized(svc) {
             if (svc.getSchedule() == null) {

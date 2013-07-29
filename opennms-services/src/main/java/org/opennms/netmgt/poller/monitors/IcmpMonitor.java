@@ -57,7 +57,9 @@ import org.opennms.netmgt.poller.NetworkInterfaceNotSupportedException;
 
 @Distributable
 final public class IcmpMonitor extends AbstractServiceMonitor {
+    private static final long serialVersionUID = -2451845021055129153L;
     private static final Logger LOG = LoggerFactory.getLogger(IcmpMonitor.class);
+
     /**
      * Constructs a new monitor.
      *

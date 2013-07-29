@@ -28,8 +28,13 @@
 
 package org.opennms.netmgt.poller.pollables;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,7 +65,8 @@ public class PollableServiceConfig implements PollConfig, ScheduleInterval {
     private Package m_pkg;
     private Timer m_timer;
     private Service m_configService;
-	private ServiceMonitor m_serviceMonitor;
+    private ServiceMonitor m_serviceMonitor;
+    private final ExecutorService m_executor;
 
     /**
      * <p>Constructor for PollableServiceConfig.</p>
@@ -71,14 +77,15 @@ public class PollableServiceConfig implements PollConfig, ScheduleInterval {
      * @param pkg a {@link org.opennms.netmgt.config.poller.Package} object.
      * @param timer a {@link org.opennms.netmgt.scheduler.Timer} object.
      */
-    public PollableServiceConfig(PollableService svc, PollerConfig pollerConfig, PollOutagesConfig pollOutagesConfig, Package pkg, Timer timer) {
+    public PollableServiceConfig(PollableService svc, PollerConfig pollerConfig, PollOutagesConfig pollOutagesConfig, Package pkg, Timer timer, ExecutorService executor) {
         m_service = svc;
         m_pollerConfig = pollerConfig;
         m_pollOutagesConfig = pollOutagesConfig;
         m_pkg = pkg;
         m_timer = timer;
         m_configService = findService(pkg);
-        
+        m_executor = executor;
+
         ServiceMonitor monitor = getServiceMonitor();
         monitor.initialize(m_service);
     }
@@ -110,15 +117,28 @@ public class PollableServiceConfig implements PollConfig, ScheduleInterval {
             packageName = m_pkg.getName();
         }
         try {
-            ServiceMonitor monitor = getServiceMonitor();
             LOG.debug("Polling {} using pkg {}", packageName, m_service);
-            PollStatus result = monitor.poll(m_service, getParameters());
+            
+            // Offload the execution of the poll to the distributed executor
+            PollStatus result = distributedPoll();
             LOG.debug("Finish polling {} using pkg {} result = {}", result, m_service, packageName);
             return result;
         } catch (Throwable e) {
             LOG.error("Unexpected exception while polling {}. Marking service as DOWN", m_service, e);
             return PollStatus.down("Unexpected exception while polling "+m_service+". "+e);
         }
+    }
+
+    public PollableTask getPollableTask() {
+        return new PollableTask(getServiceMonitor(), m_service, getParameters());
+    }
+
+    public PollStatus distributedPoll() throws Exception {
+        List<Callable<PollStatus>> polls = new ArrayList<Callable<PollStatus>>(1);
+        polls.add(getPollableTask());
+
+        List<Future<PollStatus>> results = m_executor.invokeAll(polls);
+        return results.get(0).get();
     }
 
 	private synchronized ServiceMonitor getServiceMonitor() {

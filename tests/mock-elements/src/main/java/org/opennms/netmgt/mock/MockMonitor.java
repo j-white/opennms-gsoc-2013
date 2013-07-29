@@ -38,11 +38,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class MockMonitor implements ServiceMonitor {
-	
-	private static final Logger LOG = LoggerFactory.getLogger(MockMonitor.class);
+    private static final long serialVersionUID = -6986211288353779339L;
+    private static final Logger LOG = LoggerFactory.getLogger(MockMonitor.class);
 
-
-    private MockNetwork m_network;
+    private transient MockNetwork m_network;
 
     private String m_svcName;
 
@@ -95,4 +94,12 @@ public class MockMonitor implements ServiceMonitor {
     public void release(MonitoredService svc) {
     }
 
+    private void readObject(java.io.ObjectInputStream stream)
+            throws java.io.IOException, ClassNotFoundException
+    {
+        stream.defaultReadObject();
+
+        // Read the network from the singleton when we are deserialized
+        m_network = MockNetwork.getMockNetwork();
+    }
 }

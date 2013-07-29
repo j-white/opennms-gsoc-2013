@@ -28,6 +28,7 @@
 
 package org.opennms.netmgt.poller;
 
+import java.io.Serializable;
 import java.util.Map;
 
 import org.opennms.netmgt.model.PollStatus;
@@ -63,7 +64,7 @@ import org.opennms.netmgt.model.PollStatus;
  * @author <A HREF="http://www.opennms.org/">OpenNMS </A>
  * @version $Id: $
  */
-public interface ServiceMonitor {
+public interface ServiceMonitor extends Serializable {
 	
     /**
      * <P>

@@ -36,6 +36,9 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.ResultSet;
@@ -45,11 +48,14 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.sql.DataSource;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.opennms.core.test.MockLogAppender;
 import org.opennms.core.test.db.MockDatabase;
@@ -131,6 +137,7 @@ public class PollablesTest {
     
     private int m_lockCount = 0;
     
+    private ExecutorService m_executor = Executors.newSingleThreadExecutor();
 
     @Before
     public void setUp() throws Exception {
@@ -223,7 +230,6 @@ public class PollablesTest {
         mDot4Http = mDot4.getService("HTTP");
         
         assignPollableMembers(m_network);
-        
     }
 
     private void assignPollableMembers(PollableNetwork pNetwork) throws UnknownHostException {
@@ -1495,7 +1501,7 @@ public class PollablesTest {
 //        m_pollerConfig.addDowntime(500L, 1500L, -1L, true);
 
         Package pkg = m_pollerConfig.getPackage("TestPackage");
-        PollableServiceConfig pollConfig = new PollableServiceConfig(pDot1Smtp, m_pollerConfig, m_pollerConfig, pkg, m_timer);
+        PollableServiceConfig pollConfig = new PollableServiceConfig(pDot1Smtp, m_pollerConfig, m_pollerConfig, pkg, m_timer, m_executor);
         
         m_timer.setCurrentTime(1000L);
         pDot1Smtp.updateStatus(PollStatus.down());
@@ -1525,7 +1531,29 @@ public class PollablesTest {
 
         
     }
-    
+
+    @Test
+    @Ignore
+    public void testSerialization() throws Exception {
+        Package pkg = m_pollerConfig.getPackage("TestPackage");
+        PollableServiceConfig pollConfig = new PollableServiceConfig(pDot1Smtp, m_pollerConfig, m_pollerConfig, pkg, m_timer, m_executor);
+        PollableTask pollableTask = pollConfig.getPollableTask();
+
+        byte[] taskBytes;
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutput out = null;
+        try {
+          out = new ObjectOutputStream(bos);   
+          out.writeObject(pollableTask);
+          taskBytes = bos.toByteArray();
+        } finally {
+          out.close();
+          bos.close();
+        }
+
+        assertTrue(taskBytes.length > 0);
+    }
+
     @Test
     public void testSchedule() {
         pDot1Smtp.getSchedule().schedule();
@@ -1680,7 +1708,7 @@ public class PollablesTest {
     public void testComputeScheduledOutageTime() {
         Package pkg = m_pollerConfig.getPackage("TestPackage");
         m_pollerConfig.addScheduledOutage(pkg, "first", 3000, 5000, "192.168.1.1");
-               PollableServiceConfig pollConfig = new PollableServiceConfig(pDot1Smtp, m_pollerConfig, m_pollerConfig, pkg, m_timer);
+               PollableServiceConfig pollConfig = new PollableServiceConfig(pDot1Smtp, m_pollerConfig, m_pollerConfig, pkg, m_timer, m_executor);
         
         m_timer.setCurrentTime(2000L);
         
@@ -2555,7 +2583,7 @@ public class PollablesTest {
 
             
         PollableService svc = pNetwork.createService(nodeId, nodeLabel, addr, serviceName);
-        PollableServiceConfig pollConfig = new PollableServiceConfig(svc, pollerConfig, pollOutageConfig, pkg, scheduler);
+        PollableServiceConfig pollConfig = new PollableServiceConfig(svc, pollerConfig, pollOutageConfig, pkg, scheduler, m_executor);
         svc.setPollConfig(pollConfig);
         synchronized (svc) {
             if (svc.getSchedule() == null) {

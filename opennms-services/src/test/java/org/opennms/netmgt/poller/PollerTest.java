@@ -28,6 +28,8 @@
 
 package org.opennms.netmgt.poller;
 
+import static com.jayway.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -42,15 +44,21 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.Callable;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.opennms.core.db.DataSourceFactory;
+import org.opennms.core.grid.DataGridProvider;
+import org.opennms.core.grid.DataGridProviderFactory;
 import org.opennms.core.test.ConfigurationTestUtils;
 import org.opennms.core.test.MockLogAppender;
+import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
 import org.opennms.core.test.db.MockDatabase;
+import org.opennms.core.test.grid.annotations.JUnitGrid;
 import org.opennms.core.utils.Querier;
 import org.opennms.netmgt.EventConstants;
 import org.opennms.netmgt.capsd.JdbcCapsdDbSyncer;
@@ -84,7 +92,13 @@ import org.opennms.netmgt.xml.event.Event;
 import org.opennms.netmgt.xmlrpcd.OpenNMSProvisioner;
 import org.opennms.test.mock.MockUtil;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ContextConfiguration;
 
+@RunWith(OpenNMSJUnit4ClassRunner.class)
+@ContextConfiguration(locations = {
+        "classpath:/META-INF/opennms/applicationContext-soa.xml",
+        "classpath:/META-INF/opennms/component-grid.xml"})
+@JUnitGrid(reuseGrid=false)
 public class PollerTest {
     private static final String CAPSD_CONFIG = "\n"
             + "<capsd-configuration max-suspect-thread-pool-size=\"2\" max-rescan-thread-pool-size=\"3\"\n"
@@ -94,7 +108,9 @@ public class PollerTest {
             + "   <protocol-plugin protocol=\"HTTP\" class-name=\"org.opennms.netmgt.capsd.plugins.LdapPlugin\"/>\n"
             + "</capsd-configuration>\n";
 
-	private Poller m_poller;
+        private final int N_POLLERS = 3;
+
+	private DistributedPoller m_pollers[];
 
 	private MockNetwork m_network;
 
@@ -197,13 +213,20 @@ public class PollerTest {
 		
 		PollableNetwork network = new PollableNetwork(pollContext);
 
-		m_poller = new Poller();
-        m_poller.setDataSource(m_db);
-		m_poller.setEventManager(m_eventMgr);
-		m_poller.setNetwork(network);
-		m_poller.setQueryManager(queryManager);
-		m_poller.setPollerConfig(m_pollerConfig);
-		m_poller.setPollOutagesConfig(m_pollerConfig);
+		m_pollers = new DistributedPoller[N_POLLERS];
+		for (int i = 0; i < N_POLLERS; i++) {
+		    DataGridProvider dataGridProvider = DataGridProviderFactory.getNewInstance();
+		    dataGridProvider.getAtomicLong("someAtomicLong");
+
+		    m_pollers[i] = new DistributedPoller();
+		    m_pollers[i].setDataGridProvider(dataGridProvider);
+		    m_pollers[i].setDataSource(m_db);
+		    m_pollers[i].setEventManager(m_eventMgr);
+		    m_pollers[i].setNetwork(network);
+		    m_pollers[i].setQueryManager(queryManager);
+		    m_pollers[i].setPollerConfig(m_pollerConfig);
+		    m_pollers[i].setPollOutagesConfig(m_pollerConfig);
+		}
 
 		MockOutageConfig config = new MockOutageConfig();
 		config.setGetNextOutageID(m_db.getNextOutageIdStatement());
@@ -237,7 +260,7 @@ public class PollerTest {
         Package pkg = new Package();
         pkg.setName("SFO");
         pkg.setRemote(true);
-        Poller poller = new Poller();
+        Poller poller = new DistributedPoller();
         assertFalse(poller.pollableServiceInPackage(null, null, pkg));
         poller = null;
     }
@@ -557,7 +580,7 @@ public class PollerTest {
 
     // nodeLabelChanged: EventConstants.NODE_LABEL_CHANGED_EVENT_UEI
     @Test
-    public void testNodeLabelChanged() {
+    public void testNodeLabelChanged() throws Exception {
         MockNode element = m_network.getNode(1);
         String newLabel = "NEW LABEL";
         Event event = element.createNodeLabelChangedEvent(newLabel);
@@ -573,13 +596,14 @@ public class PollerTest {
         // wait until after the first poll of the services
         poll.waitForAnticipated(1000L);
 
-        assertEquals("Router", m_poller.getNetwork().getNode(1).getNodeLabel());
+        int leaderIndex = getLeaderIndex().call();
+        assertEquals("Router", m_pollers[leaderIndex].getNetwork().getNode(1).getNodeLabel());
 
         // now delete the node and send a nodeDeleted event
         element.setLabel(newLabel);
         m_eventMgr.sendEventToListeners(event);
 
-        assertEquals(newLabel, m_poller.getNetwork().getNode(1).getNodeLabel());
+        assertEquals(newLabel, m_pollers[leaderIndex].getNetwork().getNode(1).getNodeLabel());
     }
 
 	public void testOutagesClosedOnDelete(MockElement element) {
@@ -1190,20 +1214,40 @@ public class PollerTest {
 	// Utility methods
 	//
 
+    private Callable<Integer> getLeaderIndex() {
+        return new Callable<Integer>() {
+            public Integer call() throws Exception {
+                int leaderIndex = -1;
+                for(int i = 0; i < N_POLLERS; i++) {
+                    if (m_pollers[i].isLeaderPoller()) {
+                        leaderIndex = i;
+                        break;
+                    }
+                }
+                return leaderIndex;
+            }
+        };
+    }
+
 	private void startDaemons() {
-		// m_outageMgr.init();
-		m_poller.init();
-		// m_outageMgr.start();
-		m_poller.start();
-		m_daemonsStarted = true;
+	    for (int i = 0; i < N_POLLERS; i++) {
+	        m_pollers[i].init();
+	        m_pollers[i].start();
+	    }
+	    
+	    // Wait until a leader gets elected
+	    await().until(getLeaderIndex(), greaterThanOrEqualTo(0));
+	    
+	    m_daemonsStarted = true;
 	}
 
 	private void stopDaemons() {
-		if (m_daemonsStarted) {
-			m_poller.stop();
-			// m_outageMgr.stop();
-			m_daemonsStarted = false;
-		}
+	    if (m_daemonsStarted) {
+	        for (int i = 0; i < N_POLLERS; i++) {
+	            m_pollers[i].stop();
+	        }
+	        m_daemonsStarted = false;
+	    }
 	}
 
 	private void sleep(long millis) {

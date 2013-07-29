@@ -63,18 +63,19 @@ import org.slf4j.LoggerFactory;
  * @author <a href="mailto:ranger@opennms.org">Ben Reed</a>
  */
 public class LatencyStoringServiceMonitorAdaptor implements ServiceMonitor {
-
-    
+    private static final long serialVersionUID = 7798024334225697609L;
     private static final Logger LOG = LoggerFactory.getLogger(LatencyStoringServiceMonitorAdaptor.class);
     
     /** Constant <code>DEFAULT_BASENAME="response-time"</code> */
     public static final String DEFAULT_BASENAME = "response-time";
 
     private ServiceMonitor m_serviceMonitor;
-    private PollerConfig m_pollerConfig;
     private Package m_pkg;
-    
-    private LatencyThresholdingSet m_thresholdingSet;
+
+    private final int m_step;
+    private final List<String> m_rraList;
+
+    private transient LatencyThresholdingSet m_thresholdingSet;
 
     /**
      * <p>Constructor for LatencyStoringServiceMonitorAdaptor.</p>
@@ -85,8 +86,10 @@ public class LatencyStoringServiceMonitorAdaptor implements ServiceMonitor {
      */
     public LatencyStoringServiceMonitorAdaptor(ServiceMonitor monitor, PollerConfig config, Package pkg) {
         m_serviceMonitor = monitor;
-        m_pollerConfig = config;
         m_pkg = pkg;
+        
+        m_step = config.getStep(pkg);
+        m_rraList = config.getRRAList(m_pkg);
     }
 
     /** {@inheritDoc} */
@@ -215,7 +218,7 @@ public class LatencyStoringServiceMonitorAdaptor implements ServiceMonitor {
             // Create RRD if it doesn't already exist
             List<RrdDataSource> dsList = new ArrayList<RrdDataSource>(entries.size());
             for (String dsName : entries.keySet()) {
-                dsList.add(new RrdDataSource(dsName, "GAUGE", m_pollerConfig.getStep(m_pkg)*2, "U", "U"));
+                dsList.add(new RrdDataSource(dsName, "GAUGE", m_step*2, "U", "U"));
             }
             createRRD(repository, addr, rrdBaseName, dsList);
 
@@ -265,7 +268,7 @@ public class LatencyStoringServiceMonitorAdaptor implements ServiceMonitor {
      * @throws org.opennms.netmgt.rrd.RrdException if any.
      */
     public boolean createRRD(String repository, InetAddress addr, String rrdBaseName, String dsName) throws RrdException {
-        List<RrdDataSource> dsList = Collections.singletonList(new RrdDataSource(dsName, "GAUGE", m_pollerConfig.getStep(m_pkg)*2, "U", "U"));
+        List<RrdDataSource> dsList = Collections.singletonList(new RrdDataSource(dsName, "GAUGE", m_step*2, "U", "U"));
         return createRRD(repository, addr, rrdBaseName, dsList);
 
     }
@@ -283,14 +286,11 @@ public class LatencyStoringServiceMonitorAdaptor implements ServiceMonitor {
      * @throws org.opennms.netmgt.rrd.RrdException if any.
      */
     public boolean createRRD(String repository, InetAddress addr, String rrdBaseName, List<RrdDataSource> dsList) throws RrdException {
-
-        List<String> rraList = m_pollerConfig.getRRAList(m_pkg);
-
         // add interface address to RRD repository path
         final String hostAddress = InetAddressUtils.str(addr);
 		String path = repository + File.separator + hostAddress;
 
-        return RrdUtils.createRRD(hostAddress, path, rrdBaseName, m_pollerConfig.getStep(m_pkg), dsList, rraList);
+        return RrdUtils.createRRD(hostAddress, path, rrdBaseName, m_step, dsList, m_rraList);
 
     }
 

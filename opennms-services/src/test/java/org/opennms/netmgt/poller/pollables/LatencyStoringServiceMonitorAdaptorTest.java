@@ -118,13 +118,15 @@ public class LatencyStoringServiceMonitorAdaptorTest {
         NumberFormat nf = NumberFormat.getInstance();
         Assert.assertEquals("ensure that the newly set default locale (" + Locale.getDefault() + ") uses ',' as the decimal marker", "1,5", nf.format(1.5));
         
+        expect(m_pollerConfig.getStep(isA(Package.class))).andReturn(0).anyTimes();
+        expect(m_pollerConfig.getRRAList(isA(Package.class))).andReturn(new ArrayList<String>(0));
+        m_mocks.replayAll();
+        
         LatencyStoringServiceMonitorAdaptor adaptor = new LatencyStoringServiceMonitorAdaptor(null, m_pollerConfig, new Package());
         LinkedHashMap<String, Number> map = new LinkedHashMap<String, Number>();
         map.put("cheese", 1.5);
-        
-        expect(m_pollerConfig.getStep(isA(Package.class))).andReturn(0).anyTimes();
-        expect(m_pollerConfig.getRRAList(isA(Package.class))).andReturn(new ArrayList<String>(0));
-        
+
+        m_mocks.verifyAll();
         expect(m_rrdStrategy.getDefaultFileExtension()).andReturn(".rrd").anyTimes();
         expect(m_rrdStrategy.createDefinition(isA(String.class), isA(String.class), isA(String.class), anyInt(), isAList(RrdDataSource.class), isAList(String.class))).andReturn(new Object());
         m_rrdStrategy.createFile(isA(Object.class), (Map<String, String>) eq(null));
