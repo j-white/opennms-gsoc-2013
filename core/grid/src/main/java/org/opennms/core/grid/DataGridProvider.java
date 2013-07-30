@@ -28,6 +28,8 @@ public interface DataGridProvider {
      */
     public void shutdown();
 
+    public void shutdownAll();
+
     /**
      * Retrieves a distributed atomic long.
      * 

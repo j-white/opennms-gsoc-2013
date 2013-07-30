@@ -1,11 +1,8 @@
 package org.opennms.core.grid;
 
-import org.opennms.core.grid.hazelcast.HazelcastDataGridProvider;
-
-import com.hazelcast.core.Hazelcast;
-
 public class DataGridProviderFactory {
     private static DataGridProvider m_instance = null;
+    private static Class<? extends DataGridProvider> m_clazz = null;
 
     private DataGridProviderFactory() {
         // this method is intentionally left blank
@@ -13,13 +10,32 @@ public class DataGridProviderFactory {
 
     public static synchronized DataGridProvider getInstance() {
         if (m_instance == null) {
-            m_instance = new HazelcastDataGridProvider();
+            m_instance = getNewInstance();
         }
         return m_instance;
     }
 
+    @SuppressWarnings("unchecked")
+    public static synchronized void setType(String type) {
+        try {
+            setType((Class<? extends DataGridProvider>) Class.forName(type));
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static synchronized void setType(Class<? extends DataGridProvider> clazz) {
+        m_clazz = clazz;
+    }
+
     public static DataGridProvider getNewInstance() {
-        return new HazelcastDataGridProvider();
+        try {
+            return m_clazz.newInstance();
+        } catch (InstantiationException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static synchronized void setInstance(
@@ -27,7 +43,14 @@ public class DataGridProviderFactory {
         m_instance = dataGridProvider;
     }
 
-    public static void shutdownAll() {
-        Hazelcast.shutdownAll();
+    public static synchronized void shutdownAll() {
+        if (m_clazz == null) {
+            return;
+        } else if (m_instance == null) {
+            getNewInstance().shutdownAll();
+        } else {
+            m_instance.shutdownAll();
+            m_instance = null;
+        }
     }
 }

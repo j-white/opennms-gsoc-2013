@@ -26,76 +26,39 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.core.test.grid;
+package org.opennms.core.grid;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.grid.LeaderSelector;
 import org.opennms.core.grid.LeaderSelectorListener;
-import org.opennms.core.test.MockLogAppender;
-import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
-import org.opennms.core.test.grid.annotations.JUnitGrid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
 
 import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 
 /**
  * LeaderSelectorIntegrationTest
  * 
  * @author jwhite
  */
-@RunWith(OpenNMSJUnit4ClassRunner.class)
-@ContextConfiguration(locations = {
-        "classpath:/META-INF/opennms/applicationContext-soa.xml",
-        "classpath:/META-INF/opennms/component-grid.xml" })
-@JUnitGrid()
-public class LeaderSelectorIntegrationTest implements InitializingBean {
-
-    @Autowired
-    private DataGridProvider m_dataGridProvider = null;
-
+public class LeaderSelectorTest extends AbstractGridTest {
     /**
      * Used to prevent any clients from gaining or relinquishing leadership so
      * that we can very only a single leader is elected.
      */
     private Object leaderLock = new Object();
 
-    private final static int NUMBER_OF_CLIENTS = 3;
-
     /**
      * Logger
      */
-    private static final Logger LOG = LoggerFactory.getLogger(LeaderSelectorIntegrationTest.class);
-
-    @Override
-    public void afterPropertiesSet() {
-        assertNotNull(m_dataGridProvider);
-    }
-
-    @Before
-    public void setUp() {
-        MockLogAppender.setupLogging(true, "WARN");
-    }
-
-    @After
-    public void tearDown() throws Exception {
-        MockLogAppender.assertNoErrorOrGreater();
-    }
+    private static final Logger LOG = LoggerFactory.getLogger(LeaderSelectorTest.class);
 
     /**
      * A cluster client that tries to become leader and maintains the leader
@@ -160,11 +123,11 @@ public class LeaderSelectorIntegrationTest implements InitializingBean {
     @Test
     public void leaderElection() throws Exception {
         List<ClusterClient> clients = new ArrayList<ClusterClient>(
-                                                                   NUMBER_OF_CLIENTS);
+                                                                   N_MEMBERS);
         assertFalse(isLeaderActive(clients).call());
 
         // Spawn N clients
-        for (int i = 1; i <= NUMBER_OF_CLIENTS; i++) {
+        for (int i = 1; i <= N_MEMBERS; i++) {
             ClusterClient clusterClient = new ClusterClient("n" + i);
             clusterClient.start();
             clients.add(clusterClient);

@@ -20,7 +20,7 @@ import com.hazelcast.core.HazelcastInstance;
  * 
  * @author jwhite
  */
-public class HazelcastDataGridProvider implements DataGridProvider {
+public class HazelcastGridProvider implements DataGridProvider {
 
     private static final String LOG4J_PREFIX = "hazelcast";
 
@@ -122,5 +122,9 @@ public class HazelcastDataGridProvider implements DataGridProvider {
 
     public String toString() {
         return "Hazelcast Data Grid Provider[" + getHazelcastInstance() + "]";
+    }
+
+    public void shutdownAll() {
+        Hazelcast.shutdownAll();
     }
 }

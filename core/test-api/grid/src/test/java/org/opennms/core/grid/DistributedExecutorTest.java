@@ -1,4 +1,4 @@
-package org.opennms.core.test.grid;
+package org.opennms.core.grid;
 
 import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.*;
@@ -16,7 +16,6 @@ import java.util.concurrent.ThreadFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.opennms.core.concurrent.LogPreservingThreadFactory;
 import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.grid.DataGridProviderFactory;
@@ -24,19 +23,10 @@ import org.opennms.core.grid.DistributedExecutionVisitor;
 import org.opennms.core.grid.DistributedExecutors;
 import org.opennms.core.test.MockLogAppender;
 import org.opennms.core.test.MockLogger;
-import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
-import org.opennms.core.test.grid.annotations.JUnitGrid;
 import org.opennms.test.mock.MockUtil;
-import org.springframework.test.context.ContextConfiguration;
 
-@RunWith(OpenNMSJUnit4ClassRunner.class)
-@ContextConfiguration(locations = {
-        "classpath:/META-INF/opennms/applicationContext-soa.xml",
-        "classpath*:/META-INF/opennms/component-grid.xml" })
-@JUnitGrid(reuseGrid = false)
-public class DistributedExecutorTest {
+public class DistributedExecutorTest extends AbstractGridTest {
 
-    final int N_EXECUTORS = 2;
     private DistributedExecutor m_executors[];
 
     @Before
@@ -46,16 +36,16 @@ public class DistributedExecutorTest {
                               "ERROR");
         MockLogAppender.setupLogging(true, "DEBUG", loggingProperties);
 
-        m_executors = new DistributedExecutor[N_EXECUTORS];
-        for (int i = 0; i < N_EXECUTORS; i++) {
+        m_executors = new DistributedExecutor[N_MEMBERS];
+        for (int i = 0; i < N_MEMBERS; i++) {
             m_executors[i] = new DistributedExecutor("test");
         }
 
-        MockUtil.println("Waiting for cluster to reach " + N_EXECUTORS
+        MockUtil.println("Waiting for cluster to reach " + N_MEMBERS
                 + " members");
-        await().until(getClusterSize(m_executors[N_EXECUTORS - 1].getDataGridProvider()),
-                      is(N_EXECUTORS));
-        MockUtil.println("Cluster has reached " + N_EXECUTORS + " members");
+        await().until(getClusterSize(m_executors[N_MEMBERS - 1].getDataGridProvider()),
+                      is(N_MEMBERS));
+        MockUtil.println("Cluster has reached " + N_MEMBERS + " members");
     }
 
     @After
@@ -68,7 +58,7 @@ public class DistributedExecutorTest {
     @Test(timeout = 30 * 1000)
     public void futuresTest() throws Exception {
         final int N_TASK_MULTIPLE = 10;
-        int N_TASKS = N_EXECUTORS * N_TASK_MULTIPLE;
+        int N_TASKS = N_MEMBERS * N_TASK_MULTIPLE;
         List<Callable<Integer>> tasks = new ArrayList<Callable<Integer>>();
         for (int i = 0; i < N_TASKS; i++) {
             tasks.add(new MyTask());
@@ -82,7 +72,7 @@ public class DistributedExecutorTest {
         }
 
         int totalNumTasksExecuted = 0;
-        for (int i = 0; i < N_EXECUTORS; i++) {
+        for (int i = 0; i < N_MEMBERS; i++) {
             int numTasksExecuted = m_executors[i].getNumTasksExecuted();
             MockUtil.println(String.format("Executor[%d]: %d", i,
                                            numTasksExecuted));

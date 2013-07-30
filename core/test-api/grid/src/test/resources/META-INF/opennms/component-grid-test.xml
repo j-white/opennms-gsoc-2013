@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:onmsgi="http://xmlns.opennms.org/xsd/spring/onms-osgi"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-2.5.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-2.5.xsd
+       http://xmlns.opennms.org/xsd/spring/onms-osgi http://xmlns.opennms.org/xsd/spring/onms-osgi.xsd
+       ">
+
+	<bean id="sysProps"
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetClass">
+			<value>java.lang.System</value>
+		</property>
+		<property name="targetMethod">
+			<value>getProperties</value>
+		</property>
+	</bean>
+
+	<bean id="gridClazz"
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean"
+		depends-on="sysProps">
+		<property name="targetObject">
+			<ref local="sysProps" />
+		</property>
+		<property name="targetMethod">
+			<value>getProperty</value>
+		</property>
+		<property name="arguments">
+			<list>
+				<value>gridClazz</value>
+			</list>
+		</property>
+	</bean>
+
+	<bean id="setGridClazz"
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean"
+		depends-on="gridClazz">
+		<property name="targetClass">
+			<value>org.opennms.core.grid.DataGridProviderFactory</value>
+		</property>
+		<property name="targetMethod">
+			<value>setType</value>
+		</property>
+		<property name="arguments">
+			<ref local="gridClazz" />
+		</property>
+	</bean>
+
+	<bean id="dataGridProvider" class="org.opennms.core.grid.DataGridProviderFactory"
+		factory-method="getInstance" depends-on="setGridClazz"  />
+
+	<onmsgi:service interface="org.opennms.core.grid.DataGridProvider"
+		ref="dataGridProvider" />
+
+</beans>
