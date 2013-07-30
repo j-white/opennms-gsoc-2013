@@ -48,6 +48,7 @@ import org.opennms.core.test.MockLogAppender;
 import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
 import org.opennms.core.test.grid.annotations.JUnitGrid;
 import org.opennms.core.utils.BeanUtils;
+import org.opennms.test.mock.MockUtil;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
@@ -181,11 +182,11 @@ public class DefaultDataGridProviderTest implements InitializingBean,
     }
 
     /**
-     * Ensure that the elements added to the distributed queue are equally
+     * Ensure that the elements added to the distributed queue are
      * distributed amongst the available consumers.
      */
     @Test
-    public void distributedQueueDistribution() {
+    public void queueWithCompetingConsumers() {
         final int NUM_ELEMENTS_PER_CONSUMER = 5;
         final String queueName = "myTestQueue";
 
@@ -218,19 +219,23 @@ public class DefaultDataGridProviderTest implements InitializingBean,
         // Wait until the queue is empty
         await().until(getNumElements(queue), is(0));
 
-        System.out.println("Queue distribution:");
+        int totalNumElementsConsumed = 0;
+        MockUtil.println("Queue distribution:");
         for (int i = 0; i < NUM_CLUSTER_MEMBERS; i++) {
-            System.out.println(String.format("\t Consumer[%d]: %d",
+            int els = consumer[i].getNumElementsConsumed();
+            totalNumElementsConsumed += els;
+            MockUtil.println(String.format("\t Consumer[%d]: %d",
                                              i,
-                                             consumer[i].getNumElementsConsumed()));
+                                             els));
         }
 
-        // Kill the consumers, and verify the distribution
+        // Kill the consumers
         for (int i = 0; i < NUM_CLUSTER_MEMBERS; i++) {
             consumer[i].stop();
-            assertEquals(NUM_ELEMENTS_PER_CONSUMER,
-                         consumer[i].getNumElementsConsumed());
         }
+
+        // Verify the total
+        assertEquals(NUM_CLUSTER_MEMBERS*NUM_ELEMENTS_PER_CONSUMER, totalNumElementsConsumed);
     }
 
     private Callable<Integer> getNumElements(final Queue<Integer> queue) {
