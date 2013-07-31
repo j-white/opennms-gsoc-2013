@@ -9,8 +9,7 @@
        ">
 
 	<bean id="setGridClass"
-		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean"
-		depends-on="gridClazz">
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
 		<property name="targetClass">
 			<value>org.opennms.core.grid.DataGridProviderFactory</value>
 		</property>
