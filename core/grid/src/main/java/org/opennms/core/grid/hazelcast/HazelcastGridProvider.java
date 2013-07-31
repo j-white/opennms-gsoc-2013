@@ -62,8 +62,8 @@ public class HazelcastGridProvider implements DataGridProvider {
 
     /** {@inheritDoc} */
     @Override
-    public Lock getLock(Object key) {
-        return getHazelcastInstance().getLock(key);
+    public Lock getLock(String name) {
+        return getHazelcastInstance().getLock(name);
     }
 
     /** {@inheritDoc} */

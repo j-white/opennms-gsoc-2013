@@ -15,9 +15,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import org.opennms.netmgt.dao.mock.MockDataGridProvider;
 import org.opennms.core.fiber.Fiber;
 import org.opennms.core.fiber.PausableFiber;
+import org.opennms.core.grid.mock.MockGridProvider;
 
 /**
  * Common tests for all Scheduler implementations
@@ -57,9 +57,9 @@ public class SchedulerTest {
     public static Callable<Scheduler> createDistributedScheduler() {
         return new Callable<Scheduler>() {
             public Scheduler call() {
-                MockDataGridProvider mockDataGridProvider = new MockDataGridProvider();
+                MockGridProvider mockGridProvider = new MockGridProvider();
                 return new DistributedScheduler("test", 1,
-                                                mockDataGridProvider);
+                                                mockGridProvider);
             }
         };
     }

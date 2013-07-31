@@ -1,4 +1,4 @@
-package org.opennms.netmgt.dao.mock;
+package org.opennms.core.grid.mock;
 
 import java.util.concurrent.atomic.AtomicLong;
 

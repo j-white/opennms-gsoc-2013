@@ -1,4 +1,4 @@
-package org.opennms.core.grid;
+package org.opennms.core.grid.concurrent;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -10,6 +10,8 @@ import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.opennms.core.grid.DataGridProvider;
+import org.opennms.core.grid.DataGridProviderAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,6 +87,7 @@ public class DistributedFutureTask<T> implements RunnableFuture<T>,
                 }
                 return tr.result;
             }
+            // TODO: better
             Thread.sleep(250);
         }
     }

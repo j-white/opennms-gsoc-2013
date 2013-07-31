@@ -26,7 +26,7 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.core.test.grid;
+package org.opennms.core.grid.mock;
 
 import org.opennms.core.grid.LeaderSelector;
 import org.opennms.core.grid.LeaderSelectorListener;

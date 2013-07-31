@@ -45,11 +45,11 @@ public interface DataGridProvider {
      * GOTCHAS: synchronized() doesn't work with these locks. You must use
      * lock.lock() instead.
      * 
-     * @param key
+     * @param name
      *            unique key that references this lock across the grid
      * @return distributed lock
      */
-    public Lock getLock(Object key);
+    public Lock getLock(String name);
 
     /**
      * Retrieves a distributed map.

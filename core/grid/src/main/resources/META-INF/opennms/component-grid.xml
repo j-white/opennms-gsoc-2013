@@ -1,17 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<beans xmlns="http://www.springframework.org/schema/beans" 
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xmlns:context="http://www.springframework.org/schema/context"
-       xmlns:util="http://www.springframework.org/schema/util"
-       xmlns:onmsgi="http://xmlns.opennms.org/xsd/spring/onms-osgi"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:onmsgi="http://xmlns.opennms.org/xsd/spring/onms-osgi"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-2.5.xsd
        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-2.5.xsd
        http://xmlns.opennms.org/xsd/spring/onms-osgi http://xmlns.opennms.org/xsd/spring/onms-osgi.xsd
        ">
 
-    <bean id="dataGridProvider" class="org.opennms.core.grid.DataGridProviderFactory" factory-method="getInstance"/>
+	<bean id="setGridClass"
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean"
+		depends-on="gridClazz">
+		<property name="targetClass">
+			<value>org.opennms.core.grid.DataGridProviderFactory</value>
+		</property>
+		<property name="targetMethod">
+			<value>setType</value>
+		</property>
+		<property name="arguments">
+			<value>org.opennms.core.grid.hazelcast.HazelcastGridProvider</value>
+		</property>
+	</bean>
 
-	<onmsgi:service interface="org.opennms.core.grid.DataGridProvider" ref="dataGridProvider"/>
+	<bean id="dataGridProvider" class="org.opennms.core.grid.DataGridProviderFactory"
+		factory-method="getInstance" depends-on="setGridClass" />
+
+	<onmsgi:service interface="org.opennms.core.grid.DataGridProvider"
+		ref="dataGridProvider" />
 
 </beans>

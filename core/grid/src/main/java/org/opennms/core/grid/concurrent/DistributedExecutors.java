@@ -1,7 +1,9 @@
-package org.opennms.core.grid;
+package org.opennms.core.grid.concurrent;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadFactory;
+
+import org.opennms.core.grid.DataGridProvider;
 
 public class DistributedExecutors {
     public static DistributedThreadPoolExecutor newDistributedExecutor(

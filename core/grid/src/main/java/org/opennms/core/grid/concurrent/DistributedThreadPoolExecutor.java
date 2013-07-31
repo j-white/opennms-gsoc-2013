@@ -1,4 +1,4 @@
-package org.opennms.core.grid;
+package org.opennms.core.grid.concurrent;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -6,6 +6,9 @@ import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import org.opennms.core.grid.DataGridProvider;
+import org.opennms.core.grid.DataGridProviderAware;
 
 /**
  * TODO: Prevent data from accumulating in the future map.

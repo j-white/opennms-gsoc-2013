@@ -1,4 +1,4 @@
-package org.opennms.core.grid;
+package org.opennms.core.grid.concurrent;
 
 public interface DistributedExecutionVisitor {
 

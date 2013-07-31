@@ -41,9 +41,9 @@ import org.opennms.core.concurrent.LogPreservingThreadFactory;
 import org.opennms.core.grid.AtomicLong;
 import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.grid.DataGridProviderFactory;
-import org.opennms.core.grid.DistributedExecutionVisitor;
-import org.opennms.core.grid.DistributedExecutors;
-import org.opennms.core.grid.DistributedThreadPoolExecutor;
+import org.opennms.core.grid.concurrent.DistributedExecutionVisitor;
+import org.opennms.core.grid.concurrent.DistributedExecutors;
+import org.opennms.core.grid.concurrent.DistributedThreadPoolExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
