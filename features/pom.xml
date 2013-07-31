@@ -65,6 +65,9 @@
     <!-- Notifications -->
     <module>notifications</module>
 
+    <!-- Clustering Support -->
+    <module>clustering</module>
+
     <!-- Access point monitor -->
     <module>access-point-monitor</module>
 
