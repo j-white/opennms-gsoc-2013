@@ -97,32 +97,6 @@ public class Clusterd extends AbstractServiceDaemon implements
     private boolean m_stopped = true;
 
     /**
-     * The time stamp at which the leader lock was originally requested.
-     */
-    private long m_timestampWhenLockWasRequested = 0L;
-
-    /**
-     * If more then this amount time is spent waiting for the lock
-     * before acquiring it, sleep before starting any of the services.
-     */
-    long m_lockWaitThresholdMs = DEFAULT_LOCK_WAIT_THRESHOLD_MS;
-
-    /**
-     * How long to sleep if the lock wait threshold is expired.
-     */
-    long m_prestartSleepMs = DEFAULT_PRESTART_SLEEP_MS;
-
-    /**
-     * Default value. Can be overridden when testing.
-     */
-    public static final int DEFAULT_LOCK_WAIT_THRESHOLD_MS = 60 * 1000;
-
-    /**
-     * Default value. Can be overridden when testing.
-     */
-    public static final int DEFAULT_PRESTART_SLEEP_MS = 15 * 1000;
-    
-    /**
      * Number of milliseconds used to sleep before checking the stopped flag
      * when leader.
      */
@@ -162,7 +136,6 @@ public class Clusterd extends AbstractServiceDaemon implements
         Assert.state(m_serviceManager != null, "serviceManager must be set");
         LOG.debug("Starting the leader selector.");
         m_stopped = false;
-        m_timestampWhenLockWasRequested = System.currentTimeMillis();
         m_leaderSelector.start();
     }
 
@@ -192,24 +165,6 @@ public class Clusterd extends AbstractServiceDaemon implements
     public void takeLeadership() {
         m_leaderThread = Thread.currentThread();
         LOG.info("Node was elected leader.");
-
-        long timeSpentWaitingForLock = System.currentTimeMillis()
-                - m_timestampWhenLockWasRequested;
-        LOG.debug("Waited for {} ms before acquiring lock.", timeSpentWaitingForLock);
-
-        // If the threshold has been exceeded, sleep before
-        // attempting to start any services
-        if (timeSpentWaitingForLock > m_lockWaitThresholdMs) {
-            try {
-                Thread.sleep(m_prestartSleepMs);
-            } catch (InterruptedException e) {
-                // Reset the interrupted flag
-                Thread.interrupted();
-                LOG.info("Interrupted in pre-start period. Relinquishing leadership.");
-                m_leaderThread = null;
-                return;
-            }
-        }
 
         // Get the list of vanilla services that are not running
         List<Service> vanillaServices = m_serviceConfigDao.getServicesOfType(ServiceType.VANILLA);
@@ -298,14 +253,6 @@ public class Clusterd extends AbstractServiceDaemon implements
      */
     public void setServiceManager(ServiceManager serviceManager) {
         m_serviceManager = serviceManager;
-    }
-
-    public void setLockWaitTreshold(long milliseconds) {
-        m_lockWaitThresholdMs = milliseconds;
-    }
-
-    public void setPreStartSleep(long milliseconds) {
-        m_prestartSleepMs = milliseconds;
     }
 
     /**

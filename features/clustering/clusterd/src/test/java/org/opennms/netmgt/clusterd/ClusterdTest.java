@@ -135,8 +135,8 @@ public class ClusterdTest {
         m_clusterd.setServiceConfigDao(mockServiceConfigDao);
         m_clusterd.setServiceManager(mockServiceManager);
 
-        m_clusterd.setLockWaitTreshold(lockWaitThreshold);
-        m_clusterd.setPreStartSleep(10 * leaderElectionDelay);
+        m_clusterd.getLeaderSelector().setLockWaitTreshold(lockWaitThreshold);
+        m_clusterd.getLeaderSelector().setPreStartSleep(10 * leaderElectionDelay);
 
         // Start the daemon and stop it immediately
         m_clusterd.start();

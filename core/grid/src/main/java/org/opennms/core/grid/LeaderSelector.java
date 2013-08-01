@@ -77,6 +77,32 @@ public class LeaderSelector implements Runnable {
     private boolean m_stopped = true;
 
     /**
+     * The time stamp at which the leader lock was originally requested.
+     */
+    private long m_timestampWhenLockWasRequested = 0L;
+
+    /**
+     * If more then this amount time is spent waiting for the lock
+     * before acquiring it, sleep before starting any of the services.
+     */
+    long m_lockWaitThresholdMs = DEFAULT_LOCK_WAIT_THRESHOLD_MS;
+
+    /**
+     * How long to sleep if the lock wait threshold is expired.
+     */
+    long m_prestartSleepMs = DEFAULT_PRESTART_SLEEP_MS;
+
+    /**
+     * Default value. Can be overridden when testing.
+     */
+    public static final int DEFAULT_LOCK_WAIT_THRESHOLD_MS = 60 * 1000;
+
+    /**
+     * Default value. Can be overridden when testing.
+     */
+    public static final int DEFAULT_PRESTART_SLEEP_MS = 15 * 1000;
+
+    /**
      * Number of milliseconds used to wait for the lock before checking the
      * stopped flag.
      */
@@ -130,11 +156,28 @@ public class LeaderSelector implements Runnable {
         Lock lock = m_dataGridProvider.getLock(m_leaderLockId);
 
         LOG.debug("Waiting for leader lock...");
+        m_timestampWhenLockWasRequested = System.currentTimeMillis();
         while (true) {
             try {
                 if (lock.tryLock(LOCK_WAIT_MS, TimeUnit.MILLISECONDS)) {
                     try {
                         LOG.debug("Got leader lock!");
+
+                        long timeSpentWaitingForLock = System.currentTimeMillis()
+                                - m_timestampWhenLockWasRequested;
+                        LOG.debug("Waited for {} ms before acquiring lock.", timeSpentWaitingForLock);
+
+                        // If the threshold has been exceeded, sleep before
+                        // attempting to start any services
+                        if (timeSpentWaitingForLock > m_lockWaitThresholdMs) {
+                            try {
+                                Thread.sleep(m_prestartSleepMs);
+                            } catch (InterruptedException e) {
+                                LOG.info("Interrupted in pre-start period. Relinquishing leadership.");
+                                break;
+                            }
+                        }
+
                         m_listener.takeLeadership();
                     } finally {
                         lock.unlock();
@@ -150,6 +193,14 @@ public class LeaderSelector implements Runnable {
                 break;
             }
         }
+    }
+
+    public void setLockWaitTreshold(long milliseconds) {
+        m_lockWaitThresholdMs = milliseconds;
+    }
+
+    public void setPreStartSleep(long milliseconds) {
+        m_prestartSleepMs = milliseconds;
     }
 
     public LeaderSelectorListener getListener() {
