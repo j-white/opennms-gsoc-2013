@@ -108,6 +108,8 @@ public class PollerTest {
             + "   <protocol-plugin protocol=\"HTTP\" class-name=\"org.opennms.netmgt.capsd.plugins.LdapPlugin\"/>\n"
             + "</capsd-configuration>\n";
 
+        private static final long POLL_TEST_TIMEOUT = 60*1000;
+
         private final int N_POLLERS = 3;
 
 	private DistributedPoller m_pollers[];
@@ -252,7 +254,7 @@ public class PollerTest {
 	//
 	// Tests
 	//
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
     public void testIsRemotePackage() {
     	Properties p = new Properties();
         p.setProperty("org.opennms.netmgt.ConfigFileConstants", "ERROR");
@@ -281,7 +283,7 @@ public class PollerTest {
 //
 //	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
     public void testNullInterfaceOnNodeDown() {
         // NODE processing = true;
         m_pollerConfig.setNodeOutageProcessingEnabled(true);
@@ -312,7 +314,7 @@ public class PollerTest {
         assertTrue(foundNodeDown);
     }
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
     @Ignore
 	public void testBug1564() {
 		// NODE processing = true;
@@ -390,7 +392,7 @@ public class PollerTest {
 
 	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testBug709() {
 
 		m_pollerConfig.setNodeOutageProcessingEnabled(true);
@@ -454,7 +456,7 @@ public class PollerTest {
 		m_outageAnticipator.reset();
 	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testNodeLostServiceWithReason() {
 		m_pollerConfig.setNodeOutageProcessingEnabled(true);
 
@@ -465,7 +467,7 @@ public class PollerTest {
 		assertEquals("Service Not Responding.", val);
 	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testCritSvcStatusPropagation() {
 		m_pollerConfig.setNodeOutageProcessingEnabled(true);
 
@@ -480,7 +482,7 @@ public class PollerTest {
 		verifyAnticipated(8000);
 	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testInterfaceWithNoCriticalService() {
 		m_pollerConfig.setNodeOutageProcessingEnabled(true);
 
@@ -506,7 +508,7 @@ public class PollerTest {
 	}
 
 	// what about scheduled outages?
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testDontPollDuringScheduledOutages() {
 		long start = System.currentTimeMillis();
 
@@ -558,28 +560,28 @@ public class PollerTest {
 	}
 
 	// serviceDeleted: EventConstants.SERVICE_DELETED_EVENT_UEI
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testServiceDeleted() {
 		MockService svc = m_network.getService(1, "192.168.1.1", "SMTP");
 		testElementDeleted(svc);
 	}
 
 	// interfaceDeleted: EventConstants.INTERFACE_DELETED_EVENT_UEI
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testInterfaceDeleted() {
 		MockInterface iface = m_network.getInterface(1, "192.168.1.1");
 		testElementDeleted(iface);
 	}
 
 	// nodeDeleted: EventConstants.NODE_DELETED_EVENT_UEI
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testNodeDeleted() {
 		MockNode node = m_network.getNode(1);
 		testElementDeleted(node);
 	}
 
     // nodeLabelChanged: EventConstants.NODE_LABEL_CHANGED_EVENT_UEI
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
     public void testNodeLabelChanged() throws Exception {
         MockNode element = m_network.getNode(1);
         String newLabel = "NEW LABEL";
@@ -627,27 +629,27 @@ public class PollerTest {
 
 	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testServiceOutagesClosedOnDelete() {
 		MockService element = m_network.getService(1, "192.168.1.1", "SMTP");
 		testOutagesClosedOnDelete(element);
 
 	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testInterfaceOutagesClosedOnDelete() {
 		MockInterface element = m_network.getInterface(1, "192.168.1.1");
 		testOutagesClosedOnDelete(element);
 	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testNodeOutagesClosedOnDelete() {
 		MockNode element = m_network.getNode(1);
 		testOutagesClosedOnDelete(element);
 	}
 
 	// interfaceReparented: EventConstants.INTERFACE_REPARENTED_EVENT_UEI
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testInterfaceReparented() throws Exception {
 
 		m_pollerConfig.setNodeOutageProcessingEnabled(true);
@@ -713,7 +715,7 @@ public class PollerTest {
 	}
 
 	// test to see that node lost/regained service events come in
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testNodeOutageProcessingDisabled() throws Exception {
 
 		m_pollerConfig.setNodeOutageProcessingEnabled(false);
@@ -739,7 +741,7 @@ public class PollerTest {
 	}
 
 	// test whole node down
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testNodeOutageProcessingEnabled() throws Exception {
 
 		m_pollerConfig.setNodeOutageProcessingEnabled(true);
@@ -769,7 +771,7 @@ public class PollerTest {
 
 	}
     
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
     public void testNodeLostServiceIncludesReason() throws Exception {
         MockService element = m_network.getService(1, "192.168.1.1", "SMTP");
         String expectedReason = "Oh No!! An Outage!!";
@@ -793,20 +795,20 @@ public class PollerTest {
         assertEquals(expectedReason, EventUtils.getParm(event, EventConstants.PARM_LOSTSERVICE_REASON));
     }
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testNodeLostRegainedService() throws Exception {
 
         testElementDownUp(m_network.getService(1, "192.168.1.1", "SMTP"));
 
 	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testInterfaceDownUp() {
 
 		testElementDownUp(m_network.getInterface(1, "192.168.1.1"));
 	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testNodeDownUp() {
 		testElementDownUp(m_network.getNode(1));
 	}
@@ -835,7 +837,7 @@ public class PollerTest {
 		verifyAnticipated(8000);
 	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testNoEventsOnNoOutages() throws Exception {
 
 		testElementDownUp(m_network.getService(1, "192.168.1.1", "SMTP"));
@@ -845,7 +847,7 @@ public class PollerTest {
 
 	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testPolling() throws Exception {
 
 		m_pollerConfig.setNodeOutageProcessingEnabled(false);
@@ -877,7 +879,7 @@ public class PollerTest {
 	}
 
     // test open outages for unmanaged services
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
     public void testUnmangedWithOpenOutageAtStartup() {
         // before we start we need to initialize the database
 
@@ -918,7 +920,7 @@ public class PollerTest {
 
     }
     
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
     public void testNodeGainedServiceWhileNodeDownAndServiceUp() {
         
         startDaemons();
@@ -952,7 +954,7 @@ public class PollerTest {
         
     }
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
     public void testNodeGainedServiceWhileNodeDownAndServiceDown() {
         
         startDaemons();
@@ -993,7 +995,7 @@ public class PollerTest {
     }
 
     // test open outages for unmanaged services
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testReparentCausesStatusChange() {
 
 		m_pollerConfig.setNodeOutageProcessingEnabled(true);
@@ -1043,7 +1045,7 @@ public class PollerTest {
 
 	// send a nodeGainedService event:
 	// EventConstants.NODE_GAINED_SERVICE_EVENT_UEI
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testSendNodeGainedService() {
 		m_pollerConfig.setNodeOutageProcessingEnabled(false);
 
@@ -1052,7 +1054,7 @@ public class PollerTest {
 		testSendNodeGainedService("SMTP", "HTTP");
 	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
     public void testSendNodeGainedServiceNodeOutages() {
         m_pollerConfig.setNodeOutageProcessingEnabled(true);
 
@@ -1061,7 +1063,7 @@ public class PollerTest {
         testSendNodeGainedService("SMTP", "HTTP");
     }
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testSendIPv6NodeGainedService() {
 		m_pollerConfig.setNodeOutageProcessingEnabled(false);
 
@@ -1070,7 +1072,7 @@ public class PollerTest {
         testSendNodeGainedServices(99, "TestNode", "fe80:0000:0000:0000:0231:f982:0123:4567", new String[] { "SMTP", "HTTP" });
 	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
     public void testSendIPv6NodeGainedServiceNodeOutages() {
         m_pollerConfig.setNodeOutageProcessingEnabled(true);
 
@@ -1134,7 +1136,7 @@ public class PollerTest {
 		verifyAnticipated(10000);
     }
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testNodeGainedDynamicService() throws Exception {
 		m_pollerConfig.setNodeOutageProcessingEnabled(true);
 
@@ -1185,7 +1187,7 @@ public class PollerTest {
 
 	}
 
-    @Test
+    @Test(timeout=POLL_TEST_TIMEOUT)
 	public void testSuspendPollingResumeService() {
 
 		MockService svc = m_network.getService(1, "192.168.1.2", "SMTP");
@@ -1232,9 +1234,11 @@ public class PollerTest {
 	private void startDaemons() {
 	    for (int i = 0; i < N_POLLERS; i++) {
 	        m_pollers[i].init();
+	        m_pollers[i].getLeaderSelector().setLockWaitTreshold(1000);
+	        m_pollers[i].getLeaderSelector().setPreStartSleep(5000);
 	        m_pollers[i].start();
 	    }
-	    
+
 	    // Wait until a leader gets elected
 	    await().until(getLeaderIndex(), greaterThanOrEqualTo(0));
 	    
