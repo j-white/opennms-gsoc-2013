@@ -2,6 +2,7 @@ package org.opennms.core.grid.impl;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite.SuiteClasses;
+import org.opennms.core.grid.test.AutowireTest;
 import org.opennms.core.grid.test.DistributedExecutorTest;
 import org.opennms.core.grid.test.LeaderSelectorTest;
 import org.opennms.core.grid.test.MemberTest;
@@ -33,6 +34,7 @@ import org.opennms.core.test.grid.SuiteWithType;
     LeaderSelectorTest.class,
     MemberTest.class,
     MultiClientQueueTest.class,
+    AutowireTest.class
 })
 public abstract class GridSuiteTest {
     // this class is intentionally left blank

@@ -309,17 +309,4 @@ public class LockTest extends JSR166TestCase {
             unexpectedException();
         }
     }
-
-    /**
-     * toString indicates current lock state
-     */
-    @Test(timeout = LOCK_TEST_TIMEOUT)
-    public void testToString() {
-        final Lock lock = getNewLock();
-        String us = lock.toString();
-        assertTrue(us.indexOf("Unlocked") >= 0);
-        lock.lock();
-        String ls = lock.toString();
-        assertTrue(ls.indexOf("Locked") >= 0);
-    }
 }

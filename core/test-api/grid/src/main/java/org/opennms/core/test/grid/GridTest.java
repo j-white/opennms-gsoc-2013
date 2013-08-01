@@ -15,8 +15,6 @@ import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.test.MockLogAppender;
 import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
 import org.opennms.core.test.grid.annotations.JUnitGrid;
-import org.opennms.core.utils.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 
 @RunWith(OpenNMSJUnit4ClassRunner.class)
@@ -24,13 +22,10 @@ import org.springframework.test.context.ContextConfiguration;
         "classpath:/META-INF/opennms/applicationContext-soa.xml",
         "classpath:/META-INF/opennms/component-grid-test.xml" })
 @JUnitGrid()
-public abstract class GridTest extends TestCase {
+public class GridTest extends TestCase {
     public final int N_MEMBERS;
     public static final int N_MEMBERS_DEFAULT = 3;
     public static DataGridProvider gridProvider;
-
-    @Autowired
-    protected DataGridProvider m_dataGridProvider = null;
 
     public GridTest() {
         N_MEMBERS = N_MEMBERS_DEFAULT;
@@ -47,13 +42,13 @@ public abstract class GridTest extends TestCase {
     }
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
+        super.setUp();
         MockLogAppender.setupLogging(true, "DEBUG");
-        BeanUtils.assertAutowiring(this);
         if (!gridProvider.isRunning()) {
             gridProvider = getGridProvider();
         }
-        await().until(getNumClusterMembers(gridProvider), is(1));
+        await().until(getNumMembers(gridProvider), is(1));
     }
 
     @After
@@ -81,11 +76,11 @@ public abstract class GridTest extends TestCase {
         }
     }
 
-    public Callable<Integer> getNumClusterMembers(
-            final DataGridProvider dataGridProvider) {
+    public Callable<Integer> getNumMembers(
+            final DataGridProvider gridProvider) {
         return new Callable<Integer>() {
             public Integer call() throws Exception {
-                return dataGridProvider.getGridMembers().size();
+                return gridProvider.getGridMembers().size();
             }
         };
     }

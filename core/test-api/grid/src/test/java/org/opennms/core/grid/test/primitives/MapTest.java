@@ -50,20 +50,6 @@ public class MapTest extends JSR166TestCase{
     }
 
     /**
-     *  Maps with same contents are equal
-     */
-    @Test
-    public void testEquals() {
-        Map map1 = map5();
-        Map map2 = map5();
-        assertEquals(map1, map2);
-        assertEquals(map2, map1);
-        map1.clear();
-        assertFalse(map1.equals(map2));
-        assertFalse(map2.equals(map1));
-    }
-
-    /**
      *  contains returns true for contained value
      */
     @Test
@@ -232,41 +218,5 @@ public class MapTest extends JSR166TestCase{
         Map empty = getNewMap();
         assertEquals(0, empty.size());
         assertEquals(5, map.size());
-    }
-
-    /**
-     * toString contains toString of elements
-     */
-    @Test
-    public void testToString() {
-        Map map = map5();
-        String s = map.toString();
-        for (int i = 1; i <= 5; ++i) {
-            assertTrue(s.indexOf(String.valueOf(i)) >= 0);
-        }
-    }
-
-    /**
-     * SetValue of an EntrySet entry sets value in the map.
-     */
-    @Test
-    public void testSetValueWriteThrough() {
-        // Adapted from a bug report by Eric Zoerner 
-        Map map = getNewMap();
-        assertTrue(map.isEmpty());
-        for (int i = 0; i < 20; i++)
-            map.put(new Integer(i), new Integer(i));
-        assertFalse(map.isEmpty());
-        Map.Entry entry1 = (Map.Entry)map.entrySet().iterator().next();
-        
-        // assert that entry1 is not 16
-        assertTrue("entry is 16, test not valid",
-                   !entry1.getKey().equals(new Integer(16)));
-        
-        // remove 16 (a different key) from map 
-        // which just happens to cause entry1 to be cloned in map
-        map.remove(new Integer(16));
-        entry1.setValue("XYZ");
-        assertTrue(map.containsValue("XYZ")); // fails
     }
 }

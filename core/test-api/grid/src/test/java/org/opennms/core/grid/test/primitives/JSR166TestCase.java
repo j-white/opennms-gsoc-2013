@@ -239,14 +239,13 @@ public abstract class JSR166TestCase extends GridTest {
     public void joinPool(ExecutorService exec) {
         try {
             exec.shutdown();
-            assertTrue(exec.awaitTermination(LONG_DELAY_MS, TimeUnit.MILLISECONDS));
+            assertTrue(exec.awaitTermination(2*LONG_DELAY_MS, TimeUnit.MILLISECONDS));
         } catch(SecurityException ok) {
             // Allowed in case test doesn't have privs
         } catch(InterruptedException ie) {
             fail("Unexpected exception");
         }
     }
-
 
     /**
      * fail with message "should throw exception"

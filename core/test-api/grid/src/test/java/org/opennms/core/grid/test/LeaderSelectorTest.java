@@ -74,7 +74,7 @@ public class LeaderSelectorTest extends GridTest {
 
         public ClusterClient(String id) {
             m_id = id;
-            m_leaderSelector = new LeaderSelector("test", this, m_dataGridProvider);
+            m_leaderSelector = new LeaderSelector("test", this, gridProvider);
         }
 
         public void start() {

@@ -28,7 +28,7 @@ public class MemberTest extends GridTest implements MembershipListener {
     private int m_membersRemoved;
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         super.setUp();
         m_membersAdded = 0;
         m_membersRemoved = 0;
@@ -50,7 +50,7 @@ public class MemberTest extends GridTest implements MembershipListener {
         }
 
         for (int i = 0; i < N_MEMBERS; i++) {
-            await().until(getNumClusterMembers(dataGridProvider[i]),
+            await().until(getNumMembers(dataGridProvider[i]),
                           is(N_MEMBERS));
         }
     }
@@ -58,7 +58,7 @@ public class MemberTest extends GridTest implements MembershipListener {
     @Test
     public void membershipListener() {
         gridProvider.addMembershipListener(this);
-        await().until(getNumClusterMembers(gridProvider), is(1));
+        await().until(getNumMembers(gridProvider), is(1));
 
         DataGridProvider dataGridProvider[] = new DataGridProvider[N_MEMBERS];
         for (int i = 0; i < N_MEMBERS; i++) {

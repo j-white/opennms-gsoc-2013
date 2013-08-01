@@ -22,36 +22,29 @@ public class DistributedThreadPoolExecutor extends ThreadPoolExecutor {
     private DataGridProvider m_dataGridProvider;
     private String m_name;
     private boolean fairPolicy = true;
+    private static final long DEFAULT_KEEPALIVE_MS = 250L;
 
-    public DistributedThreadPoolExecutor(int nThreads,
+    public DistributedThreadPoolExecutor(int corePoolSize,
             ThreadFactory threadFactory, DataGridProvider dataGridProvider,
             String name, BlockingQueue<Runnable> workQueue) {
-        super(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, workQueue,
+        super(corePoolSize, corePoolSize, DEFAULT_KEEPALIVE_MS, TimeUnit.MILLISECONDS, workQueue,
               threadFactory);
         init(dataGridProvider, name, workQueue, null);
     }
 
-    public DistributedThreadPoolExecutor(int nThreads,
+    public DistributedThreadPoolExecutor(int corePoolSize,
             ThreadFactory threadFactory, DataGridProvider dataGridProvider,
             String name, BlockingQueue<Runnable> workQueue,
             DistributedExecutionVisitor visitor) {
-        super(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, workQueue,
+        super(corePoolSize, corePoolSize, DEFAULT_KEEPALIVE_MS, TimeUnit.MILLISECONDS, workQueue,
               threadFactory);
         init(dataGridProvider, name, workQueue, visitor);
     }
 
-    public DistributedThreadPoolExecutor(int nThreads, int i,
-            long lONG_DELAY_MS, TimeUnit milliseconds,
+    public DistributedThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit,
             BlockingQueue<Runnable> workQueue, DataGridProvider dataGridProvider, String name) {
-        super(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, workQueue,
-              new SimpleThreadFactory());
+        super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue);
         init(dataGridProvider, name, workQueue, null);
-    }
-
-    static class SimpleThreadFactory implements ThreadFactory{
-        public Thread newThread(Runnable r){
-            return new Thread(r);
-        }   
     }
 
     public static String getQueueName(String name) {
@@ -65,6 +58,8 @@ public class DistributedThreadPoolExecutor extends ThreadPoolExecutor {
         m_name = name;
         m_workQueue = workQueue;
         m_visitor = visitor;
+
+        allowCoreThreadTimeOut(true);
 
         if (fairPolicy) {
             this.prestartAllCoreThreads();

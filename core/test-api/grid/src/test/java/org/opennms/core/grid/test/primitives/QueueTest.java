@@ -23,7 +23,7 @@ import org.junit.Test;
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class QueueTest extends JSR166TestCase {
-    public static final int QUEUE_TEST_TIMEOUT = 3000;
+    public static final int QUEUE_TEST_TIMEOUT = 10*1000;
 
     private static BlockingQueue getNewQueue() {
         return gridProvider.getQueue("queue" + ROLLING_ID++);
@@ -32,7 +32,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * offer(null) throws NPE
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testOfferNull() {
         try {
             BlockingQueue q = getNewQueue();
@@ -44,7 +44,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * add(null) throws NPE
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testAddNull() {
         try {
             BlockingQueue q = getNewQueue();
@@ -56,7 +56,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * addAll(null) throws NPE
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testAddAll1() {
         try {
             BlockingQueue q = getNewQueue();
@@ -67,36 +67,9 @@ public class QueueTest extends JSR166TestCase {
     }
 
     /**
-     * addAll(this) throws IAE
-     */
-    @Test
-    public void testAddAllSelf() {
-        try {
-            BlockingQueue q = getNewQueue();
-            q.addAll(q);
-            shouldThrow();
-        }
-        catch (IllegalArgumentException success) {}
-    }
-
-    /**
-     * addAll of a collection with null elements throws NPE
-     */
-    @Test
-    public void testAddAll2() {
-        try {
-            BlockingQueue q = getNewQueue();
-            Integer[] ints = new Integer[1];
-            q.addAll(Arrays.asList(ints));
-            shouldThrow();
-        }
-        catch (NullPointerException success) {}
-    }
-
-    /**
      * put(null) throws NPE
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testPutNull() {
         try {
             BlockingQueue q = getNewQueue();
@@ -111,57 +84,9 @@ public class QueueTest extends JSR166TestCase {
      }
 
     /**
-     * take blocks interruptibly when empty
-     */
-    @Test(timeout=QUEUE_TEST_TIMEOUT)
-    public void testTakeFromEmpty() {
-        final BlockingQueue q = getNewQueue();
-        Thread t = new Thread(new Runnable() {
-                public void run() {
-                    try {
-                        q.take();
-                        threadShouldThrow();
-                    } catch (InterruptedException success){ }                
-                }
-            });
-        try {
-            t.start();
-            Thread.sleep(SHORT_DELAY_MS);
-            t.interrupt();
-            t.join();
-        } catch (Exception e){
-            unexpectedException();
-        }
-    }
-
-    /**
-     * take blocks interruptibly when empty
-     */
-    @Test(timeout=QUEUE_TEST_TIMEOUT)
-    public void testFairTakeFromEmpty() {
-        final BlockingQueue q = getNewQueue();
-        Thread t = new Thread(new Runnable() {
-                public void run() {
-                    try {
-                        q.take();
-                        threadShouldThrow();
-                    } catch (InterruptedException success){ }                
-                }
-            });
-        try {
-            t.start();
-            Thread.sleep(SHORT_DELAY_MS);
-            t.interrupt();
-            t.join();
-        } catch (Exception e){
-            unexpectedException();
-        }
-    }
-
-    /**
      * poll fails unless active taker
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testPoll() {
         BlockingQueue q = getNewQueue();
         assertNull(q.poll());
@@ -170,7 +95,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * timed pool with zero timeout times out if no active taker
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testTimedPoll0() {
         try {
             BlockingQueue q = getNewQueue();
@@ -183,7 +108,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * timed pool with nonzero timeout times out if no active taker
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testTimedPoll() {
         try {
             BlockingQueue q = getNewQueue();
@@ -205,7 +130,7 @@ public class QueueTest extends JSR166TestCase {
                         BlockingQueue q = getNewQueue();
                         assertNull(q.poll(SHORT_DELAY_MS, TimeUnit.MILLISECONDS));
                     } catch (InterruptedException success){
-                    }   
+                    }
                 }});
         t.start();
         try { 
@@ -219,8 +144,7 @@ public class QueueTest extends JSR166TestCase {
     }
 
     /**
-     *  timed poll before a delayed offer fails; after offer succeeds;
-     *  on interruption throws
+     *  timed poll before a delayed offer fails; after offer succeeds
      */
     @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testTimedPollWithOffer() {
@@ -229,51 +153,23 @@ public class QueueTest extends JSR166TestCase {
                 public void run() {
                     try {
                         threadAssertNull(q.poll(SHORT_DELAY_MS, TimeUnit.MILLISECONDS));
-                        q.poll(LONG_DELAY_MS, TimeUnit.MILLISECONDS);
-                        q.poll(LONG_DELAY_MS, TimeUnit.MILLISECONDS);
-                        threadShouldThrow();
-                    } catch (InterruptedException success) { }                
+                        threadAssertEquals(zero, q.poll(LONG_DELAY_MS, TimeUnit.MILLISECONDS));
+                        threadAssertNull(q.poll(SHORT_DELAY_MS, TimeUnit.MILLISECONDS));
+                    } catch (InterruptedException success) {}                
                 }
             });
         try {
             t.start();
             Thread.sleep(SMALL_DELAY_MS);
             assertTrue(q.offer(zero, SHORT_DELAY_MS, TimeUnit.MILLISECONDS));
-            t.interrupt();
             t.join();
         } catch (Exception e){
-            unexpectedException();
-        }
-    }  
-
-    /**
-     * Interrupted timed poll throws InterruptedException instead of
-     * returning timeout status
-     */
-    @Test(timeout=QUEUE_TEST_TIMEOUT)
-    public void testFairInterruptedTimedPoll() {
-        Thread t = new Thread(new Runnable() {
-                public void run() {
-                    try {
-                        BlockingQueue q = getNewQueue();
-                        assertNull(q.poll(SHORT_DELAY_MS, TimeUnit.MILLISECONDS));
-                    } catch (InterruptedException success){
-                    }   
-                }});
-        t.start();
-        try { 
-           Thread.sleep(SHORT_DELAY_MS); 
-           t.interrupt();
-           t.join();
-        }
-        catch (InterruptedException ie) {
             unexpectedException();
         }
     }
 
     /**
-     *  timed poll before a delayed offer fails; after offer succeeds;
-     *  on interruption throws
+     *  timed poll before a delayed offer fails; after offer succeeds
      */
     @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testFairTimedPollWithOffer() {
@@ -282,9 +178,7 @@ public class QueueTest extends JSR166TestCase {
                 public void run() {
                     try {
                         threadAssertNull(q.poll(SHORT_DELAY_MS, TimeUnit.MILLISECONDS));
-                        q.poll(LONG_DELAY_MS, TimeUnit.MILLISECONDS);
-                        q.poll(LONG_DELAY_MS, TimeUnit.MILLISECONDS);
-                        threadShouldThrow();
+                        threadAssertEquals(zero, q.poll(LONG_DELAY_MS, TimeUnit.MILLISECONDS));
                     } catch (InterruptedException success) { }                
                 }
             });
@@ -292,18 +186,16 @@ public class QueueTest extends JSR166TestCase {
             t.start();
             Thread.sleep(SMALL_DELAY_MS);
             assertTrue(q.offer(zero, SHORT_DELAY_MS, TimeUnit.MILLISECONDS));
-            t.interrupt();
             t.join();
         } catch (Exception e){
             unexpectedException();
         }
     }  
 
-
     /**
      * peek returns null
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testPeek() {
         BlockingQueue q = getNewQueue();
         assertNull(q.peek());
@@ -312,7 +204,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * element throws NSEE
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testElement() {
         BlockingQueue q = getNewQueue();
         try {
@@ -325,7 +217,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * remove throws NSEE if no active taker
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testRemove() {
         BlockingQueue q = getNewQueue();
         try {
@@ -338,7 +230,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * remove(x) returns false
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testRemoveElement() {
         BlockingQueue q = getNewQueue();
         assertFalse(q.remove(zero));
@@ -348,7 +240,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * contains returns false
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testContains() {
         BlockingQueue q = getNewQueue();
         assertFalse(q.contains(zero));
@@ -357,7 +249,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * clear ensures isEmpty
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testClear() {
         BlockingQueue q = getNewQueue();
         q.clear();
@@ -367,7 +259,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * containsAll returns false unless empty
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testContainsAll() {
         BlockingQueue q = getNewQueue();
         Integer[] empty = new Integer[0];
@@ -379,7 +271,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * retainAll returns false
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testRetainAll() {
         BlockingQueue q = getNewQueue();
         Integer[] empty = new Integer[0];
@@ -391,7 +283,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * removeAll returns false
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testRemoveAll() {
         BlockingQueue q = getNewQueue();
         Integer[] empty = new Integer[0];
@@ -404,7 +296,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * toArray is empty
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testToArray() {
         BlockingQueue q = getNewQueue();
         Object[] o = q.toArray();
@@ -415,7 +307,7 @@ public class QueueTest extends JSR166TestCase {
      * toArray(a) is nulled at position 0
      */
     @SuppressWarnings("unused")
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testToArray2() {
         BlockingQueue q = getNewQueue();
         Integer[] ints = new Integer[1];
@@ -426,7 +318,7 @@ public class QueueTest extends JSR166TestCase {
      * toArray(null) throws NPE
      */
     @SuppressWarnings("unused")
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testToArray_BadArg() {
         try {
             BlockingQueue q = getNewQueue();
@@ -440,7 +332,7 @@ public class QueueTest extends JSR166TestCase {
      * iterator does not traverse any elements
      */
     @SuppressWarnings("unused")
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testIterator() {
         BlockingQueue q = getNewQueue();
         Iterator it = q.iterator();
@@ -455,7 +347,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * iterator remove throws ISE
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testIteratorRemove() {
         BlockingQueue q = getNewQueue();
         Iterator it = q.iterator();
@@ -469,7 +361,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * toString returns a non-null string
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testToString() {
         BlockingQueue q = getNewQueue();
         String s = q.toString();
@@ -512,22 +404,9 @@ public class QueueTest extends JSR166TestCase {
     }
 
     /**
-     * drainTo(null) throws NPE
-     */ 
-    @Test
-    public void testDrainToNull() {
-        BlockingQueue q = getNewQueue();
-        try {
-            q.drainTo(null);
-            shouldThrow();
-        } catch(NullPointerException success) {
-        }
-    }
-
-    /**
      * drainTo(this) throws IAE
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testDrainToSelf() {
         BlockingQueue q = getNewQueue();
         try {
@@ -540,7 +419,7 @@ public class QueueTest extends JSR166TestCase {
     /**
      * drainTo(c) of empty queue doesn't transfer elements
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testDrainTo() {
         BlockingQueue q = getNewQueue();
         ArrayList l = new ArrayList();
@@ -580,22 +459,9 @@ public class QueueTest extends JSR166TestCase {
     }
 
     /**
-     * drainTo(null, n) throws NPE
-     */
-    @Test
-    public void testDrainToNullN() {
-        BlockingQueue q = getNewQueue();
-        try {
-            q.drainTo(null, 0);
-            shouldThrow();
-        } catch(NullPointerException success) {
-        }
-    }
-
-    /**
      * drainTo(this, n) throws IAE
      */
-    @Test
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
     public void testDrainToSelfN() {
         BlockingQueue q = getNewQueue();
         try {

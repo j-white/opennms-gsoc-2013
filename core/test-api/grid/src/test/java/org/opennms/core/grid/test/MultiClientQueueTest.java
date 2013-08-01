@@ -34,7 +34,7 @@ public class MultiClientQueueTest extends JSR166TestCase {
             consumer[i] = new MyConsumer(dataGridProvider[i], queueName);
         }
 
-        await().until(getNumClusterMembers(dataGridProvider[N_MEMBERS - 1]),
+        await().until(getNumMembers(dataGridProvider[N_MEMBERS - 1]),
                       is(N_MEMBERS));
 
         // Initialize the queue
