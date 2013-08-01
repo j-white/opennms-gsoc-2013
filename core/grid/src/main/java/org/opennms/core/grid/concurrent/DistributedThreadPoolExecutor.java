@@ -59,7 +59,7 @@ public class DistributedThreadPoolExecutor extends ThreadPoolExecutor {
         m_workQueue = workQueue;
         m_visitor = visitor;
 
-        allowCoreThreadTimeOut(true);
+        // allowCoreThreadTimeOut(true);
 
         if (fairPolicy) {
             this.prestartAllCoreThreads();
