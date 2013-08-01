@@ -3,6 +3,7 @@ package org.opennms.core.grid;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 
 /**
@@ -28,6 +29,8 @@ public interface DataGridProvider {
      */
     public void shutdown();
 
+    public boolean isRunning();
+
     public void shutdownAll();
 
     /**
@@ -38,6 +41,14 @@ public interface DataGridProvider {
      * @return atomic long
      */
     public AtomicLong getAtomicLong(String name);
+
+    /**
+     * 
+     * @param lock
+     * @param name
+     * @return
+     */
+    public Condition getCondition(Lock lock, String name);
 
     /**
      * Retrieves a distributed lock.

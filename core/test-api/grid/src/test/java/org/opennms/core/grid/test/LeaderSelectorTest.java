@@ -26,7 +26,7 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.core.grid;
+package org.opennms.core.grid.test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,20 +35,19 @@ import java.util.concurrent.Callable;
 import org.junit.Test;
 import org.opennms.core.grid.LeaderSelector;
 import org.opennms.core.grid.LeaderSelectorListener;
+import org.opennms.core.test.grid.GridTest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 
 /**
  * LeaderSelectorIntegrationTest
  * 
  * @author jwhite
  */
-public class LeaderSelectorTest extends AbstractGridTest {
+public class LeaderSelectorTest extends GridTest {
     /**
      * Used to prevent any clients from gaining or relinquishing leadership so
      * that we can very only a single leader is elected.

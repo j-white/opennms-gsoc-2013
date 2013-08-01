@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 
 import org.opennms.core.logging.Logging;
@@ -14,6 +15,7 @@ import org.opennms.core.grid.MembershipListener;
 
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.ILock;
 
 /**
  * Hazelcast Data Grid Provider
@@ -58,6 +60,16 @@ public class HazelcastGridProvider implements DataGridProvider {
     public AtomicLong getAtomicLong(String name) {
         return new HazelcastAtomicLong(
                                        getHazelcastInstance().getAtomicLong(name));
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public Condition getCondition(Lock lock, String name) {
+        if (lock instanceof ILock) {
+            return ((ILock)lock).newCondition(name);
+        } else {
+            throw new RuntimeException("Invalid lock");
+        }
     }
 
     /** {@inheritDoc} */
@@ -126,5 +138,10 @@ public class HazelcastGridProvider implements DataGridProvider {
 
     public void shutdownAll() {
         Hazelcast.shutdownAll();
+    }
+
+    @Override
+    public boolean isRunning() {
+        return getHazelcastInstance().getLifecycleService().isRunning();
     }
 }

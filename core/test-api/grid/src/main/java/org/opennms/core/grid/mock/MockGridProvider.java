@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -47,6 +48,11 @@ public class MockGridProvider implements DataGridProvider, Member {
         gridMap.clear();
     }
 
+    @Override
+    public boolean isRunning() {
+        return members.contains(this);
+    }
+ 
     private void initIfRequired() {
         if (!m_initialized) {
             init();
@@ -64,6 +70,11 @@ public class MockGridProvider implements DataGridProvider, Member {
     @Override
     public synchronized AtomicLong getAtomicLong(String name) {
         return (AtomicLong)getOrSet("AtomicLong." + name, new MockAtomicLong());
+    }
+
+    @Override
+    public Condition getCondition(Lock lock, String name) {
+        return lock.newCondition();
     }
 
     @Override

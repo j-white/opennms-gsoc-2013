@@ -1,4 +1,4 @@
-package org.opennms.core.grid;
+package org.opennms.core.grid.test;
 
 import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
@@ -7,8 +7,15 @@ import java.util.concurrent.Callable;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.opennms.core.grid.DataGridProvider;
+import org.opennms.core.grid.DataGridProviderFactory;
+import org.opennms.core.grid.MembershipEvent;
+import org.opennms.core.grid.MembershipListener;
+import org.opennms.core.test.grid.GridTest;
+import org.opennms.core.test.grid.annotations.JUnitGrid;
 
-public class MemberTest extends AbstractGridTest implements MembershipListener {
+@JUnitGrid(reuseGrid=false)
+public class MemberTest extends GridTest implements MembershipListener {
 
     /**
      * Number of members added since the last test.
@@ -34,7 +41,8 @@ public class MemberTest extends AbstractGridTest implements MembershipListener {
     @Test
     public void multipleClusterMembers() {
         DataGridProvider dataGridProvider[] = new DataGridProvider[N_MEMBERS];
-        for (int i = 0; i < N_MEMBERS; i++) {
+        dataGridProvider[0] = gridProvider;
+        for (int i = 1; i < N_MEMBERS; i++) {
             // Get a new instance as opposed to re-using the same one so that
             // multiple members can be on the cluster
             dataGridProvider[i] = DataGridProviderFactory.getNewInstance();
@@ -49,11 +57,8 @@ public class MemberTest extends AbstractGridTest implements MembershipListener {
 
     @Test
     public void membershipListener() {
-        DataGridProvider firstDataGridProvider = DataGridProviderFactory.getNewInstance();
-        firstDataGridProvider.init();
-        firstDataGridProvider.addMembershipListener(this);
-
-        await().until(getNumClusterMembers(firstDataGridProvider), is(1));
+        gridProvider.addMembershipListener(this);
+        await().until(getNumClusterMembers(gridProvider), is(1));
 
         DataGridProvider dataGridProvider[] = new DataGridProvider[N_MEMBERS];
         for (int i = 0; i < N_MEMBERS; i++) {

@@ -2,6 +2,7 @@ package org.opennms.core.grid.zookeeper;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -46,6 +47,14 @@ public class ZooKeeperGridProvider extends ActiveMQGridProvider {
     /** @inheritDoc */
     @Override
     public AtomicLong getAtomicLong(String name) {
+        init();
+        return new ZKAtomicLong(m_client, name);
+    }
+
+    /** @inheritDoc */
+    @Override
+    public Condition getCondition(Lock lock, String name) {
+        // TODO Auto-generated method stub
         return null;
     }
 
@@ -103,5 +112,10 @@ public class ZooKeeperGridProvider extends ActiveMQGridProvider {
 
     private static ZKConfigDao getConfig() {
         return ZKConfigFactory.getInstance();
+    }
+
+    @Override
+    public boolean isRunning() {
+        return true;
     }
 }

@@ -1,11 +1,17 @@
-package org.opennms.core.grid;
+package org.opennms.core.test.grid;
+
+import static com.jayway.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.is;
 
 import java.util.concurrent.Callable;
+
+import junit.framework.TestCase;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
+import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.test.MockLogAppender;
 import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
 import org.opennms.core.test.grid.annotations.JUnitGrid;
@@ -17,41 +23,47 @@ import org.springframework.test.context.ContextConfiguration;
 @ContextConfiguration(locations = {
         "classpath:/META-INF/opennms/applicationContext-soa.xml",
         "classpath:/META-INF/opennms/component-grid-test.xml" })
-//@DirtiesContext
-@JUnitGrid(reuseGrid = false)
-public abstract class AbstractGridTest {
+@JUnitGrid()
+public abstract class GridTest extends TestCase {
     public final int N_MEMBERS;
     public static final int N_MEMBERS_DEFAULT = 3;
+    public static DataGridProvider gridProvider;
 
     @Autowired
     protected DataGridProvider m_dataGridProvider = null;
 
-    public AbstractGridTest() {
+    public GridTest() {
         N_MEMBERS = N_MEMBERS_DEFAULT;
     }
 
-    public AbstractGridTest(final int numMembers) {
+    public GridTest(final int numMembers) {
         N_MEMBERS = numMembers;
     }
 
     @BeforeClass
     public static void onlyOnce() {
         org.junit.Assume.assumeNotNull(System.getProperty("gridClazz"));
+        gridProvider = getGridProvider();
     }
 
     @Before
     public void setUp() {
         MockLogAppender.setupLogging(true, "DEBUG");
         BeanUtils.assertAutowiring(this);
+        if (!gridProvider.isRunning()) {
+            gridProvider = getGridProvider();
+        }
+        await().until(getNumClusterMembers(gridProvider), is(1));
     }
 
     @After
     public void tearDown() throws Exception {
+        super.tearDown();
         MockLogAppender.assertNoErrorOrGreater();
     }
 
     @SuppressWarnings("unchecked")
-    public Class<? extends DataGridProvider> getGridClazz() {
+    protected static Class<? extends DataGridProvider> getGridClazz() {
         try {
             return (Class<? extends DataGridProvider>) Class.forName(System.getProperty("gridClazz"));
         } catch (ClassNotFoundException e) {
@@ -59,7 +71,7 @@ public abstract class AbstractGridTest {
         }
     }
 
-    public DataGridProvider getGridProvider() {
+    public static DataGridProvider getGridProvider() {
         try {
             return getGridClazz().newInstance();
         } catch (InstantiationException e) {

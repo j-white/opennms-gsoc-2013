@@ -40,6 +40,20 @@ public class DistributedThreadPoolExecutor extends ThreadPoolExecutor {
         init(dataGridProvider, name, workQueue, visitor);
     }
 
+    public DistributedThreadPoolExecutor(int nThreads, int i,
+            long lONG_DELAY_MS, TimeUnit milliseconds,
+            BlockingQueue<Runnable> workQueue, DataGridProvider dataGridProvider, String name) {
+        super(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, workQueue,
+              new SimpleThreadFactory());
+        init(dataGridProvider, name, workQueue, null);
+    }
+
+    static class SimpleThreadFactory implements ThreadFactory{
+        public Thread newThread(Runnable r){
+            return new Thread(r);
+        }   
+    }
+
     public static String getQueueName(String name) {
         return name + ".Queue";
     }

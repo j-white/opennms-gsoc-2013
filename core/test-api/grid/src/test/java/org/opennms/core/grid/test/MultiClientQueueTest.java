@@ -1,17 +1,19 @@
-package org.opennms.core.grid;
+package org.opennms.core.grid.test;
 
 import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
 
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 
 import org.junit.Test;
+import org.opennms.core.grid.DataGridProvider;
+import org.opennms.core.grid.DataGridProviderFactory;
+import org.opennms.core.grid.test.primitives.JSR166TestCase;
 import org.opennms.test.mock.MockUtil;
 
-public class QueueTest extends AbstractGridTest {
+public class MultiClientQueueTest extends JSR166TestCase {
 
     /**
      * Ensure that the elements added to the distributed queue are

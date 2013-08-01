@@ -28,6 +28,13 @@ public interface AtomicLong {
     public long decrementAndGet();
 
     /**
+     * Atomically decrements the current value by one.
+     *
+     * @return the old value
+     */
+    public long getAndDecrement();
+
+    /**
      * Gets the current value.
      *
      * @return the current value

@@ -1,8 +1,7 @@
-package org.opennms.core.grid;
+package org.opennms.core.grid.test;
 
 import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertEquals;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -23,9 +22,10 @@ import org.opennms.core.grid.concurrent.DistributedExecutionVisitor;
 import org.opennms.core.grid.concurrent.DistributedExecutors;
 import org.opennms.core.test.MockLogAppender;
 import org.opennms.core.test.MockLogger;
+import org.opennms.core.test.grid.GridTest;
 import org.opennms.test.mock.MockUtil;
 
-public class DistributedExecutorTest extends AbstractGridTest {
+public class DistributedExecutorTest extends GridTest {
 
     private DistributedExecutor m_executors[];
 

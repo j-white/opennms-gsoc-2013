@@ -30,13 +30,20 @@ package org.opennms.core.test.grid;
 
 import java.lang.reflect.Method;
 
+import org.apache.curator.test.TestingServer;
+import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.grid.DataGridProviderFactory;
+import org.opennms.core.grid.hazelcast.HazelcastGridProvider;
+import org.opennms.core.grid.zookeeper.ZKConfigFactory;
+import org.opennms.core.grid.zookeeper.ZooKeeperGridProvider;
 import org.opennms.core.test.grid.annotations.JUnitGrid;
 import org.springframework.test.context.TestContext;
 import org.springframework.test.context.support.AbstractTestExecutionListener;
 
 public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
+    private Class<? extends DataGridProvider> m_gridClass;
     private boolean m_reuseGrid = false;
+    private TestingServer m_zkTestServer;
 
     public void beforeTestClass(TestContext testContext) throws Exception {
         final JUnitGrid jug = findAnnotation(testContext);
@@ -46,9 +53,7 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
         }
 
         m_reuseGrid = jug.reuseGrid();
-
-        System.setProperty("hazelcast.logging.type", "slf4j");
-        System.setProperty("java.net.preferIPv4Stack", "true");
+        m_gridClass = getGridClazz();
     }
 
     public void beforeTestMethod(TestContext testContext) throws Exception {
@@ -58,9 +63,7 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
             return;
         }
 
-        if (!m_reuseGrid) {
-            shutdownAndResetProvider();
-        }
+        startupProvider();
     }
 
     public void afterTestMethod(TestContext testContext) throws Exception {
@@ -79,13 +82,48 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
         shutdownAndResetProvider();
     }
 
-    private void shutdownAndResetProvider() {
+    private void startupProvider() throws Exception {
+        if (m_gridClass == null) {
+            return;
+        }
+
+        if (HazelcastGridProvider.class.isAssignableFrom(m_gridClass)) {
+            System.setProperty("hazelcast.logging.type", "slf4j");
+            System.setProperty("java.net.preferIPv4Stack", "true");
+        }
+
+        if (ZooKeeperGridProvider.class.isAssignableFrom(m_gridClass)) {
+            m_zkTestServer = new TestingServer();
+            ZKConfigFactory.setInstance(new ZKConfigFactory(m_zkTestServer.getConnectString()));
+        }
+    }
+
+    private void shutdownAndResetProvider() throws Exception {
         // Shutdown all of the instances
         DataGridProviderFactory.shutdownAll();
 
         // Reset the default instance - it will no longer work after being
         // shutdown
         DataGridProviderFactory.setInstance(null);
+        
+        if (m_gridClass == null) {
+            return;
+        }
+
+        if (ZooKeeperGridProvider.class.isAssignableFrom(m_gridClass)) {
+            if (m_zkTestServer != null) {
+                m_zkTestServer.close();
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Class<? extends DataGridProvider> getGridClazz() throws ClassNotFoundException {
+        String className = System.getProperty("gridClazz");
+        if (className == null) {
+            return null;
+        }
+        return (Class<? extends DataGridProvider>) Class.forName(className);
     }
 
     private static JUnitGrid findAnnotation(final TestContext testContext) {

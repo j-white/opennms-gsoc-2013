@@ -88,7 +88,7 @@ public class DistributedFutureTask<T> implements RunnableFuture<T>,
                 return tr.result;
             }
             // TODO: better
-            Thread.sleep(250);
+            Thread.sleep(50);
         }
     }
 

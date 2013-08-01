@@ -34,6 +34,14 @@ public class HazelcastAtomicLong implements AtomicLong {
     }
 
     @Override
+    public long getAndDecrement() {
+        // if you can't make it, fake it
+        long val = m_atomicLong.get();
+        m_atomicLong.decrementAndGet();
+        return val;
+    }
+
+    @Override
     public long get() {
         return m_atomicLong.get();
     }
@@ -61,5 +69,9 @@ public class HazelcastAtomicLong implements AtomicLong {
     @Override
     public void set(long newValue) {
         m_atomicLong.set(newValue);
+    }
+
+    public String toString() {
+        return Long.valueOf(get()).toString();
     }
 }

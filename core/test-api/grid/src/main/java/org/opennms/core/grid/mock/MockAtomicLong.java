@@ -23,6 +23,11 @@ public class MockAtomicLong implements org.opennms.core.grid.AtomicLong {
     }
 
     @Override
+    public long getAndDecrement() {
+        return m_atomicLong.getAndDecrement();
+    }
+
+    @Override
     public long get() {
         return m_atomicLong.get();
     }
@@ -50,5 +55,9 @@ public class MockAtomicLong implements org.opennms.core.grid.AtomicLong {
     @Override
     public void set(long newValue) {
         m_atomicLong.set(newValue);
+    }
+
+    public String toString() {
+        return Long.valueOf(get()).toString();
     }
 }
