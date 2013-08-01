@@ -123,14 +123,19 @@ public abstract class JSR166TestCase extends GridTest {
     /**
      * Flag set true if any threadAssert methods fail
      */
-    volatile boolean threadFailed;
+    protected static volatile boolean threadFailed;
+
+    protected static volatile boolean threadAssertFailed;
+    protected static volatile String threadAssertMessage;
 
     /**
      * Initialize test to indicate that no thread assertions have failed
      */
-    public void setUp() { 
+    public void setUp() {
         setDelays();
-        threadFailed = false;  
+        threadFailed = false;
+        threadAssertFailed = false;
+        threadAssertMessage = "";
     }
 
     /**
@@ -138,24 +143,27 @@ public abstract class JSR166TestCase extends GridTest {
      */
     public void tearDown() throws Exception { 
         assertFalse(threadFailed);  
+        assertFalse(threadAssertMessage, threadAssertFailed);
     }
 
     /**
      * Fail, also setting status to indicate current testcase should fail
      */ 
-    public void threadFail(String reason) {
+    public static void threadFail(String reason) {
         threadFailed = true;
-        fail(reason);
+        threadAssertFailed = true;
+        threadAssertMessage = reason;
     }
 
     /**
      * If expression not true, set status to indicate current testcase
      * should fail
      */ 
-    public void threadAssertTrue(boolean b) {
+    public static void threadAssertTrue(boolean b) {
         if (!b) {
             threadFailed = true;
-            assertTrue(b);
+            threadAssertFailed = true;
+            threadAssertMessage = b + " != true";
         }
     }
 
@@ -163,10 +171,11 @@ public abstract class JSR166TestCase extends GridTest {
      * If expression not false, set status to indicate current testcase
      * should fail
      */ 
-    public void threadAssertFalse(boolean b) {
+    public static void threadAssertFalse(boolean b) {
         if (b) {
             threadFailed = true;
-            assertFalse(b);
+            threadAssertFailed = true;
+            threadAssertMessage = b + " != false";
         }
     }
 
@@ -174,10 +183,11 @@ public abstract class JSR166TestCase extends GridTest {
      * If argument not null, set status to indicate current testcase
      * should fail
      */ 
-    public void threadAssertNull(Object x) {
+    public static void threadAssertNull(Object x) {
         if (x != null) {
             threadFailed = true;
-            assertNull(x);
+            threadAssertFailed = true;
+            threadAssertMessage = x + " != null";
         }
     }
 
@@ -185,10 +195,11 @@ public abstract class JSR166TestCase extends GridTest {
      * If arguments not equal, set status to indicate current testcase
      * should fail
      */ 
-    public void threadAssertEquals(long x, long y) {
+    public static void threadAssertEquals(long x, long y) {
         if (x != y) {
             threadFailed = true;
-            assertEquals(x, y);
+            threadAssertFailed = true;
+            threadAssertMessage = x + " != " + y;
         }
     }
 
@@ -196,29 +207,31 @@ public abstract class JSR166TestCase extends GridTest {
      * If arguments not equal, set status to indicate current testcase
      * should fail
      */ 
-    public void threadAssertEquals(Object x, Object y) {
+    public static void threadAssertEquals(Object x, Object y) {
         if (x != y && (x == null || !x.equals(y))) {
             threadFailed = true;
-            assertEquals(x, y);
+            threadAssertFailed = true;
+            threadAssertMessage = x + " != " + y;
         }
     }
 
     /**
      * threadFail with message "should throw exception"
      */ 
-    public void threadShouldThrow() {
+    public static void threadShouldThrow() {
         threadFailed = true;
-        fail("should throw exception");
+        threadAssertFailed = true;
+        threadAssertMessage = "should throw exception";
     }
 
     /**
      * threadFail with message "Unexpected exception"
      */
-    public void threadUnexpectedException() {
+    public static void threadUnexpectedException() {
         threadFailed = true;
-        fail("Unexpected exception");
+        threadAssertFailed = true;
+        threadAssertMessage = "Unexpected exception";
     }
-
 
     /**
      * Wait out termination of a thread pool or fail doing so
@@ -327,7 +340,7 @@ public abstract class JSR166TestCase extends GridTest {
         public Integer call() { return one; }
     }
 
-    class ShortRunnable implements GridRunnable {
+    static class ShortRunnable implements GridRunnable {
         private static final long serialVersionUID = 7172506603673778067L;
         public void run() {
             try {
@@ -339,7 +352,7 @@ public abstract class JSR166TestCase extends GridTest {
         }
     }
 
-    class ShortInterruptedRunnable implements GridRunnable {
+    static class ShortInterruptedRunnable implements GridRunnable {
         private static final long serialVersionUID = -2714773584275397220L;
         public void run() {
             try {
@@ -351,7 +364,7 @@ public abstract class JSR166TestCase extends GridTest {
         }
     }
 
-    class SmallRunnable implements GridRunnable {
+    static class SmallRunnable implements GridRunnable {
         private static final long serialVersionUID = -4639649733055566312L;
         public void run() {
             try {
@@ -363,7 +376,7 @@ public abstract class JSR166TestCase extends GridTest {
         }
     }
 
-    class SmallPossiblyInterruptedRunnable implements GridRunnable {
+    static class SmallPossiblyInterruptedRunnable implements GridRunnable {
         private static final long serialVersionUID = -7383112194894224586L;
         public void run() {
             try {
@@ -375,7 +388,7 @@ public abstract class JSR166TestCase extends GridTest {
     }
 
     @SuppressWarnings("rawtypes")
-    class SmallCallable implements GridCallable {
+    static class SmallCallable implements GridCallable {
         private static final long serialVersionUID = 7253652535702399376L;
         public Object call() {
             try {
@@ -388,7 +401,7 @@ public abstract class JSR166TestCase extends GridTest {
         }
     }
 
-    class SmallInterruptedRunnable implements GridRunnable {
+    static class SmallInterruptedRunnable implements GridRunnable {
         private static final long serialVersionUID = 530009740419803354L;
         public void run() {
             try {
@@ -401,7 +414,7 @@ public abstract class JSR166TestCase extends GridTest {
     }
 
 
-    class MediumRunnable implements GridRunnable {
+    static class MediumRunnable implements GridRunnable {
         private static final long serialVersionUID = 8139884053053785888L;
         public void run() {
             try {
@@ -413,7 +426,7 @@ public abstract class JSR166TestCase extends GridTest {
         }
     }
 
-    class MediumInterruptedRunnable implements GridRunnable {
+    static class MediumInterruptedRunnable implements GridRunnable {
         private static final long serialVersionUID = 2099081509094165197L;
         public void run() {
             try {
@@ -425,7 +438,7 @@ public abstract class JSR166TestCase extends GridTest {
         }
     }
 
-    class MediumPossiblyInterruptedRunnable implements GridRunnable {
+    static class MediumPossiblyInterruptedRunnable implements GridRunnable {
         private static final long serialVersionUID = 7742072252958787969L;
         public void run() {
             try {
@@ -436,7 +449,7 @@ public abstract class JSR166TestCase extends GridTest {
         }
     }
 
-    class LongPossiblyInterruptedRunnable implements GridRunnable {
+    static class LongPossiblyInterruptedRunnable implements GridRunnable {
         private static final long serialVersionUID = 5077787455004433437L;
         public void run() {
             try {

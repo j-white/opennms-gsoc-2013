@@ -19,7 +19,7 @@ import org.junit.Test;
  * via the grid provider interface.
  */
 public class LockTest extends JSR166TestCase {
-    public static final int LOCK_TEST_TIMEOUT = 3000;
+    public static final int LOCK_TEST_TIMEOUT = 10*1000;
 
     private Lock getNewLock() {
         return gridProvider.getLock("lock" + ROLLING_ID++);
@@ -32,7 +32,7 @@ public class LockTest extends JSR166TestCase {
     /**
      * A runnable calling lockInterruptibly
      */
-    class InterruptibleLockRunnable implements Runnable {
+    static class InterruptibleLockRunnable implements Runnable {
         final Lock lock;
         InterruptibleLockRunnable(Lock l) { lock = l; }
         public void run() {
@@ -46,7 +46,7 @@ public class LockTest extends JSR166TestCase {
      * A runnable calling lockInterruptibly that expects to be
      * interrupted
      */
-    class InterruptedLockRunnable implements Runnable {
+    static class InterruptedLockRunnable implements Runnable {
         final Lock lock;
         InterruptedLockRunnable(Lock l) { lock = l; }
         public void run() {

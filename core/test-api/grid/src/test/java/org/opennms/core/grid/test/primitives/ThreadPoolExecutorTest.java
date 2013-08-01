@@ -1,5 +1,6 @@
 package org.opennms.core.grid.test.primitives;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -54,6 +55,17 @@ public class ThreadPoolExecutorTest extends JSR166TestCase {
         }
     }
 
+    private static class MyGridRunnable implements GridRunnable {
+        private static final long serialVersionUID = -94127140582583058L;
+        public void run() {
+            try {
+                Thread.sleep(SHORT_DELAY_MS);
+            } catch(InterruptedException e){
+                threadUnexpectedException();
+            }
+        }
+    }
+
     /**
      *  execute successfully executes a runnable
      */
@@ -61,16 +73,7 @@ public class ThreadPoolExecutorTest extends JSR166TestCase {
     public void testExecute() {
         DistributedThreadPoolExecutor p1 = new DistributedThreadPoolExecutor(1, 1, LONG_DELAY_MS, TimeUnit.MILLISECONDS, getNewQueue(), gridProvider, getNewExecutorName());;
         try {
-            p1.execute(new GridRunnable() {
-                    private static final long serialVersionUID = -94127140582583058L;
-                    public void run() {
-                        try {
-                            Thread.sleep(SHORT_DELAY_MS);
-                        } catch(InterruptedException e){
-                            threadUnexpectedException();
-                        }
-                    }
-                });
+            p1.execute(new MyGridRunnable());
             Thread.sleep(SMALL_DELAY_MS);
         } catch(InterruptedException e){
             unexpectedException();
@@ -231,6 +234,18 @@ public class ThreadPoolExecutorTest extends JSR166TestCase {
         }       
     }
 
+    private static class GridFutureTask<T> extends FutureTask<T> implements Serializable {
+        private static final long serialVersionUID = -4847144330561094332L;
+
+        public GridFutureTask(Callable<T> callable) {
+            super(callable);
+        }
+
+        public GridFutureTask(Runnable runnable, T result) {
+            super(runnable, result);
+        }
+    }
+
     /**
      *   purge removes cancelled tasks from the queue
      */
@@ -240,7 +255,7 @@ public class ThreadPoolExecutorTest extends JSR166TestCase {
         DistributedThreadPoolExecutor p1 = new DistributedThreadPoolExecutor(1, 1, LONG_DELAY_MS, TimeUnit.MILLISECONDS, getNewQueue(), gridProvider, getNewExecutorName());
         FutureTask[] tasks = new FutureTask[5];
         for(int i = 0; i < 5; i++){
-            tasks[i] = new FutureTask(new MediumPossiblyInterruptedRunnable(), Boolean.TRUE);
+            tasks[i] = new GridFutureTask(new MediumPossiblyInterruptedRunnable(), Boolean.TRUE);
             p1.execute(tasks[i]);
         }
         tasks[4].cancel(true);
