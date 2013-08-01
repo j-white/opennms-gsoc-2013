@@ -167,8 +167,7 @@ public class DistributedScheduler extends AbstractScheduler implements
         }
 
         // Initialize the distributed executor
-        ThreadFactory threadFactory = new LogPreservingThreadFactory(
-                                                                     getClass().getSimpleName(),
+        ThreadFactory threadFactory = new LogPreservingThreadFactory(name,
                                                                      maxSize,
                                                                      true);
 

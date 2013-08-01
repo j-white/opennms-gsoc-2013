@@ -131,7 +131,7 @@ public class LegacyScheduler extends AbstractScheduler {
      */
     public LegacyScheduler(final String parent, final int maxSize) {
         m_status = START_PENDING;
-        m_runner = Executors.newFixedThreadPool(maxSize, new LogPreservingThreadFactory(parent, maxSize, false));
+        m_runner = Executors.newFixedThreadPool(maxSize, new LogPreservingThreadFactory(parent, maxSize, true));
         m_queues = new ConcurrentSkipListMap<Long, BlockingQueue<ReadyRunnable>>();
         m_scheduled = 0;
     }
