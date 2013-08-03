@@ -2,22 +2,23 @@ package org.opennms.core.grid.zookeeper;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.opennms.core.grid.AtomicLong;
+import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.grid.Member;
 import org.opennms.core.grid.MembershipListener;
-import org.opennms.core.grid.activemq.ActiveMQGridProvider;
 
 /**
  * Implements the data grid provider interface using ZooKeeper.
  * 
  * @author jwhite
  */
-public class ZooKeeperGridProvider extends ActiveMQGridProvider {
+public class ZooKeeperGridProvider implements DataGridProvider {
     private CuratorFramework m_client = null;
 
     @Override
@@ -67,8 +68,9 @@ public class ZooKeeperGridProvider extends ActiveMQGridProvider {
 
     /** @inheritDoc */
     @Override
-    public <K, V> Map<K, V> getMap(String name) {
-        return null;
+    public <K, V> Map<K, V> getMap(final String name) {
+        init();
+        return new ZKMap<K, V>(m_client, name);
     }
 
     /** @inheritDoc */
@@ -78,6 +80,13 @@ public class ZooKeeperGridProvider extends ActiveMQGridProvider {
          * /onms/sets/${name}/${elements}
          */
         return null;
+    }
+
+    /** @inheritDoc */
+    @Override
+    public <T> BlockingQueue<T> getQueue(final String name) {
+        init();
+        return new ZKQueue<T>(m_client, name);
     }
 
     /** @inheritDoc */
