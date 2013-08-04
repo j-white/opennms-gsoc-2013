@@ -1,13 +1,16 @@
 package org.opennms.core.grid.zookeeper;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
+import java.util.concurrent.locks.Lock;
 
+import org.apache.curator.RetryLoop;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.EnsurePath;
 import org.apache.curator.utils.ZKPaths;
@@ -19,57 +22,50 @@ import static org.opennms.core.grid.zookeeper.ZKUtils.objToBytes;
 import static org.opennms.core.grid.zookeeper.ZKUtils.objFromBytes;
 
 /**
- * /onms/map/<name>/<hashcode>/key-1/value
- * /onms/map/<name>/<hashcode>/key-2/value
- *
+ * Stores a map in a ZooKeeper tree: /onms/map/<name>/<hash>/key-<seq#>/value
+ * 
+ * The first level stores the hash-codes, the second level stores the keys and
+ * the third level stores the values.
+ * 
+ * A distributed lock is used to synchronize operations that modify the maps
+ * contents. No lock is used for read operations.
+ * 
  * @author jwhite
  */
 public class ZKMap<K, V> implements Map<K, V> {
-
     public static final String PATH_PREFIX = "/onms/map/";
     private static final String KEY_PREFIX = "key-";
     private static final String VALUE_SUFFIX = "val";
 
     private final CuratorFramework m_client;
     private final String m_path;
-    private final EnsurePath m_ensurePath;
+    private final Lock m_lock;
 
     public ZKMap(CuratorFramework client, String name) {
         m_client = client;
         m_path = ZKPaths.makePath(PATH_PREFIX, name);
-        m_ensurePath = m_client.newNamespaceAwareEnsurePath(m_path);
-    }
-
-    private <U> U callWithRetry(Callable<U> proc) {
-        return ZKUtils.callWithRetry(m_client.getZookeeperClient(), proc);
+        m_lock = new ZKLock(client, "internal.map." + name);
     }
 
     @Override
     public int size() {
-        return callWithRetry(new Callable<Integer>() {
-            @Override
-            public Integer call() throws Exception {
-                List<String> hashCodes;
-                try {
-                    hashCodes = m_client.getChildren().forPath(m_path);
-                } catch (KeeperException.NoNodeException ignore) {
-                    // No map - no elements
-                    return 0;
-                }
+        int numEls = 0;
 
-                int numEls = 0;
-                for (String hashCode : hashCodes) {
-                    String thisPath = ZKPaths.makePath(m_path, hashCode);
-                    try {
-                        List<String> els = m_client.getChildren().forPath(thisPath);
-                        numEls += els.size();
-                    } catch (KeeperException.NoNodeException ignore) {
-                        // Another client removed the node first, try next
-                    }
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    numEls = getKeyPaths().size();
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
                 }
-                return numEls;
             }
-        });
+        } catch (Exception e) {
+            throw new ZKException(e);
+        }
+
+        return numEls;
     }
 
     @Override
@@ -79,189 +75,361 @@ public class ZKMap<K, V> implements Map<K, V> {
 
     @Override
     public boolean containsKey(Object key) {
-        return keySet().contains(key);
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<String> keyPaths = getKeyPaths();
+                    for (String keyPath : keyPaths) {
+                        try {
+                            if (key.equals(getKey(keyPath))) {
+                                return true;
+                            }
+                        } catch (KeeperException.NoNodeException ignore) {
+                            // Next
+                        }
+                    }
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            throw new ZKException(e);
+        }
+
+        return false;
     }
 
     @Override
     public boolean containsValue(Object value) {
-        return values().contains(value);
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<String> keyPaths = getKeyPaths();
+                    for (String keyPath : keyPaths) {
+                        try {
+                            if (value.equals(getValue(keyPath))) {
+                                return true;
+                            }
+                        } catch (KeeperException.NoNodeException ignore) {
+                            // Next
+                        }
+                    }
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            throw new ZKException(e);
+        }
+
+        return false;
     }
 
     @Override
     public V get(final Object key) {
-        return callWithRetry(new Callable<V>() {
-            @Override
-            public V call() throws Exception {
-                String hashCodePath = ZKPaths.makePath(m_path, "" + key.hashCode());
-                
-                List<String> keyNodesForHash;
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
                 try {
-                    keyNodesForHash = m_client.getChildren().forPath(hashCodePath);
-                } catch (KeeperException.NoNodeException ignore) {
-                    // No keys here
-                    return null;
-                }
-
-                for (String keyNode : keyNodesForHash) {
-                    String keyNodePath = ZKPaths.makePath(hashCodePath, keyNode);
-                    if (key.equals(objFromBytes(m_client.getData().forPath(keyNodePath)))) {
-                        String valuePath = ZKPaths.makePath(keyNodePath, VALUE_SUFFIX);
-                        return objFromBytes(m_client.getData().forPath(valuePath));
+                    List<String> keyPaths = getKeyPaths(key);
+                    for (String keyPath : keyPaths) {
+                        try {
+                            if (key.equals(getKey(keyPath))) {
+                                return getValue(keyPath);
+                            }
+                        } catch (KeeperException.NoNodeException ignore) {
+                            // Next
+                        }
                     }
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
                 }
-
-                return null;
             }
-        });
+        } catch (Exception e) {
+            throw new ZKException(e);
+        }
+
+        return null;
     }
 
     @Override
     public V put(final K key, final V value) {
-        return callWithRetry(new Callable<V>() {
-            @Override
-            public V call() throws Exception {
-                String hashCodePath = ZKPaths.makePath(m_path, "" + key.hashCode());
-                EnsurePath ensurePath = m_client.newNamespaceAwareEnsurePath(hashCodePath);
-                ensurePath.ensure(m_client.getZookeeperClient());
-
-                String keyPath = ZKPaths.makePath(hashCodePath, KEY_PREFIX);
-                keyPath = m_client.create().withMode(CreateMode.PERSISTENT_SEQUENTIAL).forPath(keyPath, objToBytes(key));
-
-                String valuePath = ZKPaths.makePath(keyPath, VALUE_SUFFIX);
-                m_client.create().withMode(CreateMode.PERSISTENT).forPath(valuePath, objToBytes(value));
-                return value;
-            }
-        });
-    }
-
-    @Override
-    public V remove(final Object key) {
-        return callWithRetry(new Callable<V>() {
-            @Override
-            public V call() throws Exception {
-                String hashCodePath = ZKPaths.makePath(m_path, "" + key.hashCode());
-
-                List<String> keyNodesForHash;
-                try {
-                    keyNodesForHash = m_client.getChildren().forPath(hashCodePath);
-                } catch (KeeperException.NoNodeException ignore) {
-                    // No keys here
-                    return null;
-                }
-
-                for (String keyNode : keyNodesForHash) {
-                    String keyPath = ZKPaths.makePath(hashCodePath, keyNode);
-                    if (key.equals(objFromBytes(m_client.getData().forPath(keyPath)))) {
-                        // Fetch the value
-                        String valuePath = ZKPaths.makePath(keyPath, VALUE_SUFFIX);
-                        V val = objFromBytes(m_client.getData().forPath(valuePath));
-
-                        // Delete the key recursively
-                        ZKUtil.deleteRecursive(m_client.getZookeeperClient().getZooKeeper(), keyPath);
-                        return val;
-                    }
-                }
-
-                return null;
-            }
-        });
-    }
-
-    @Override
-    public void putAll(Map<? extends K, ? extends V> m) {
-        for (Entry<? extends K, ? extends V> entry : m.entrySet()) {
-            put(entry.getKey(), entry.getValue());
+        m_lock.lock();
+        try {
+            return putNoLock(key, value);
+        } catch (Exception e) {
+            throw new ZKException(e);
+        } finally {
+            m_lock.unlock();
         }
     }
 
     @Override
-    public void clear() {
-        callWithRetry(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                try {
-                    // Delete the key recursively
-                    ZKUtil.deleteRecursive(m_client.getZookeeperClient().getZooKeeper(), m_path);
-                } catch (KeeperException.NoNodeException ignore) {
-                    // It's already gone
-                }
-                return null;
+    public void putAll(Map<? extends K, ? extends V> m) {
+        m_lock.lock();
+        try {
+            for (Entry<? extends K, ? extends V> entry : m.entrySet()) {
+                putNoLock(entry.getKey(), entry.getValue());
             }
-        });
+        } catch (Exception e) {
+            throw new ZKException(e);
+        } finally {
+            m_lock.unlock();
+        }
+    }
+
+    private V putNoLock(final K key, final V value) throws Exception {
+        RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+        while (retryLoop.shouldContinue()) {
+            try {
+                // Search the existing keys
+                List<String> keyPaths = getKeyPaths(key);
+                for (String keyPath : keyPaths) {
+                    K k = getKey(keyPath);
+                    if (key.equals(k)) {
+                        V last = getValue(keyPath);
+                        setValue(keyPath, value);
+                        return last;
+                    }
+                }
+
+                // No existing keys found, add a new one
+                addKeyValue(key, value);
+                retryLoop.markComplete();
+            } catch (Exception e) {
+                retryLoop.takeException(e);
+            }
+        }
+
+        return null;
+    }
+
+    @Override
+    public V remove(final Object key) {
+        m_lock.lock();
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<String> keyPaths = getKeyPaths(key);
+                    for (String keyPath : keyPaths) {
+                        K k = getKey(keyPath);
+                        if (key.equals(k)) {
+                            // Fetch the value
+                            V val = getValue(keyPath);
+
+                            // Delete the key recursively
+                            ZKUtil.deleteRecursive(m_client.getZookeeperClient().getZooKeeper(),
+                                                   keyPath);
+
+                            return val;
+                        }
+                    }
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            throw new ZKException(e);
+        } finally {
+            m_lock.unlock();
+        }
+        return null;
+    }
+
+    @Override
+    public void clear() {
+        m_lock.lock();
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    // Delete the map recursively
+                    ZKUtil.deleteRecursive(m_client.getZookeeperClient().getZooKeeper(),
+                                           m_path);
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            throw new ZKException(e);
+        } finally {
+            m_lock.unlock();
+        }
     }
 
     @Override
     public Set<K> keySet() {
-        return callWithRetry(new Callable<Set<K>>() {
-            @Override
-            public Set<K> call() throws Exception {
-                Set<K> keySet = new HashSet<K>();
-                List<String> hashCodes = m_client.getChildren().forPath(m_path);
-                for (String hashCode : hashCodes) {
-                    String hashCodePath = ZKPaths.makePath(m_path, hashCode);
-                    
-                    
-                    List<String> keyNodesForHash = m_client.getChildren().forPath(hashCodePath);
-                    for (String keyNode : keyNodesForHash) {
-                        String keyNodePath = ZKPaths.makePath(hashCodePath, keyNode);
-                        K key = objFromBytes(m_client.getData().forPath(keyNodePath));
-                        keySet.add(key);
+        Set<K> keySet = new HashSet<K>();
+
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<String> keyPaths = getKeyPaths();
+                    for (String keyPath : keyPaths) {
+                        try {
+                            keySet.add(getKey(keyPath));
+                        } catch (KeeperException.NoNodeException ignore) {
+                            // Next
+                        }
                     }
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
                 }
-                return keySet;
             }
-        });
+        } catch (Exception e) {
+            throw new ZKException(e);
+        }
+
+        return keySet;
     }
 
     @Override
     public Collection<V> values() {
-        return callWithRetry(new Callable<Collection<V>>() {
-            @Override
-            public Collection<V> call() throws Exception {
-                List<V> values = new LinkedList<V>();
-                List<String> hashCodes = m_client.getChildren().forPath(m_path);
-                for (String hashCode : hashCodes) {
-                    String hashCodePath = ZKPaths.makePath(m_path, hashCode);
-                    List<String> keyNodesForHash = m_client.getChildren().forPath(hashCodePath);
-                    for (String keyNode : keyNodesForHash) {
-                        // Fetch the value
-                        String keyNodePath = ZKPaths.makePath(hashCodePath, keyNode);
-                        String valuePath = ZKPaths.makePath(keyNodePath, VALUE_SUFFIX);
-                        V val = objFromBytes(m_client.getData().forPath(valuePath));
-                        values.add(val);
+        List<V> values = new LinkedList<V>();
+
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<String> keyPaths = getKeyPaths();
+                    for (String keyPath : keyPaths) {
+                        try {
+                            values.add(getValue(keyPath));
+                        } catch (KeeperException.NoNodeException ignore) {
+                            // Next
+                        }
                     }
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
                 }
-                return values;
             }
-        });
+        } catch (Exception e) {
+            throw new ZKException(e);
+        }
+
+        return values;
     }
 
     @Override
     public Set<java.util.Map.Entry<K, V>> entrySet() {
-        return callWithRetry(new Callable<Set<java.util.Map.Entry<K, V>>>() {
-            @Override
-            public Set<java.util.Map.Entry<K, V>> call() throws Exception {
-                Set<java.util.Map.Entry<K, V>> entries = new HashSet<java.util.Map.Entry<K, V>>();
+        Set<java.util.Map.Entry<K, V>> entries = new HashSet<java.util.Map.Entry<K, V>>();
 
-                List<String> hashCodes = m_client.getChildren().forPath(m_path);
-                for (String hashCode : hashCodes) {
-                    String hashCodePath = ZKPaths.makePath(m_path, hashCode);
-                    List<String> keyNodesForHash = m_client.getChildren().forPath(hashCodePath);
-                    for (String keyNode : keyNodesForHash) {
-                        // Fetch the key
-                        String keyNodePath = ZKPaths.makePath(hashCodePath, keyNode);
-                        K key = objFromBytes(m_client.getData().forPath(keyNodePath));
-
-                        // Fetch the value
-                        String valuePath = ZKPaths.makePath(keyNodePath, VALUE_SUFFIX);
-                        V val = objFromBytes(m_client.getData().forPath(valuePath));
-
-                        entries.add(new ZKMapEntry(key, val));
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<String> keyPaths = getKeyPaths();
+                    for (String keyPath : keyPaths) {
+                        try {
+                            K key = getKey(keyPath);
+                            V val = getValue(keyPath);
+                            entries.add(new ZKMapEntry(key, val));
+                        } catch (KeeperException.NoNodeException ignore) {
+                            // Next
+                        }
                     }
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
                 }
-                return entries;
             }
-        });
+        } catch (Exception e) {
+            throw new ZKException(e);
+        }
+
+        return entries;
+    }
+
+    private String getHashPath(Object key) {
+        return ZKPaths.makePath(m_path, "" + key.hashCode());
+    }
+
+    private K getKey(String keyPath) throws Exception {
+        return objFromBytes(m_client.getData().forPath(keyPath));
+    }
+
+    private V getValue(String keyPath) throws Exception {
+        return objFromBytes(m_client.getData().forPath((ZKPaths.makePath(keyPath,
+                                                                         VALUE_SUFFIX))));
+    }
+
+    private void setValue(String keyPath, V value) throws Exception {
+        m_client.setData().forPath(ZKPaths.makePath(keyPath, VALUE_SUFFIX),
+                                   objToBytes(value));
+    }
+
+    private void addKeyValue(K key, V value) throws Exception {
+        String hashPath = getHashPath(key);
+        EnsurePath ensurePath = m_client.newNamespaceAwareEnsurePath(hashPath);
+        ensurePath.ensure(m_client.getZookeeperClient());
+
+        String keyPath = ZKPaths.makePath(hashPath, KEY_PREFIX);
+        keyPath = m_client.create().withMode(CreateMode.PERSISTENT_SEQUENTIAL).forPath(keyPath,
+                                                                                       objToBytes(key));
+
+        String valuePath = ZKPaths.makePath(keyPath, VALUE_SUFFIX);
+        m_client.create().withMode(CreateMode.PERSISTENT).forPath(valuePath,
+                                                                  objToBytes(value));
+    }
+
+    private List<String> getHashPaths() throws Exception {
+        List<String> hashPaths = new LinkedList<String>();
+        try {
+            List<String> hashNodes = m_client.getChildren().forPath(m_path);
+            Collections.sort(hashNodes);
+            for (String hashNode : hashNodes) {
+                hashPaths.add(ZKPaths.makePath(m_path, hashNode));
+            }
+        } catch (KeeperException.NoNodeException ignore) {
+            // No map, no entries
+            return new ArrayList<String>(0);
+        }
+        return hashPaths;
+    }
+
+    private List<String> getKeyPaths() throws Exception {
+        List<String> keyPaths = new LinkedList<String>();
+        List<String> hashPaths = getHashPaths();
+        for (String hashPath : hashPaths) {
+            try {
+                List<String> keyNodes = m_client.getChildren().forPath(hashPath);
+                for (String keyNode : keyNodes) {
+                    keyPaths.add(ZKPaths.makePath(hashPath, keyNode));
+                }
+            } catch (KeeperException.NoNodeException ignore) {
+                // Another client removed the entry first, try next
+            }
+        }
+        return keyPaths;
+    }
+
+    private List<String> getKeyPaths(Object key) throws Exception {
+        List<String> keyPaths = new LinkedList<String>();
+        List<String> keysForHash;
+        String hashPath = getHashPath(key);
+        try {
+            keysForHash = m_client.getChildren().forPath(hashPath);
+        } catch (KeeperException.NoNodeException ignore) {
+            // No keys here
+            return keyPaths;
+        }
+
+        for (String keyNode : keysForHash) {
+            keyPaths.add(ZKPaths.makePath(hashPath, keyNode));
+        }
+
+        return keyPaths;
     }
 
     private class ZKMapEntry implements Entry<K, V> {
