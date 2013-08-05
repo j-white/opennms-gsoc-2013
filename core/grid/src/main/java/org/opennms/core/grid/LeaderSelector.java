@@ -46,6 +46,10 @@ import org.springframework.util.Assert;
  * function returns the lock is released and made available for another
  * candidate to secure.
  * 
+ * FIXME: This recipe needs to be revised. If a client holds a lock and is disconnected
+ * from the grid - it will continue to hold the lock. It is then possible for multiple
+ * nodes to hold the lock concurrently.
+ *
  * @author jwhite
  * 
  */
