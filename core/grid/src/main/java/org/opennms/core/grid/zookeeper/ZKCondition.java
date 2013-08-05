@@ -6,28 +6,25 @@ import java.util.concurrent.locks.Condition;
 
 import org.apache.curator.framework.CuratorFramework;
 
+/**
+ * TODO
+ *
+ * @author jwhite
+ */
 public class ZKCondition implements Condition {
 
-    //private final CuratorFramework m_client;
-    //private final ZKLock m_lock;
-    //private final String m_name;
-
     public ZKCondition(CuratorFramework client, ZKLock lock, String name) {
-        //m_client = client;
-        //m_lock = lock;
-        //m_name = name;
+        // TODO Auto-generated method stub
     }
 
     @Override
     public void await() throws InterruptedException {
         // TODO Auto-generated method stub
-        
     }
 
     @Override
     public void awaitUninterruptibly() {
         // TODO Auto-generated method stub
-        
     }
 
     @Override
@@ -52,12 +49,10 @@ public class ZKCondition implements Condition {
     @Override
     public void signal() {
         // TODO Auto-generated method stub
-        
     }
 
     @Override
     public void signalAll() {
         // TODO Auto-generated method stub
-        
     }
 }

@@ -327,7 +327,6 @@ public class QueueTest extends JSR166TestCase {
         } catch(NullPointerException success){}
     }
 
-
     /**
      * iterator does not traverse any elements
      */

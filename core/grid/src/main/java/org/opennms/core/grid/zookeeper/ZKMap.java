@@ -10,16 +10,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 
-import org.apache.curator.RetryLoop;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.EnsurePath;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZKUtil;
-
-import static org.opennms.core.grid.zookeeper.ZKUtils.objToBytes;
-import static org.opennms.core.grid.zookeeper.ZKUtils.objFromBytes;
 
 /**
  * Stores a map in a ZooKeeper tree: /onms/map/<name>/<hash>/key-<seq#>/value
@@ -52,7 +48,8 @@ public class ZKMap<K, V> implements Map<K, V> {
         int numEls = 0;
 
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(
+                                                                              m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     numEls = getKeyPaths().size();
@@ -76,7 +73,8 @@ public class ZKMap<K, V> implements Map<K, V> {
     @Override
     public boolean containsKey(Object key) {
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(
+                                                                              m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<String> keyPaths = getKeyPaths();
@@ -104,7 +102,7 @@ public class ZKMap<K, V> implements Map<K, V> {
     @Override
     public boolean containsValue(Object value) {
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<String> keyPaths = getKeyPaths();
@@ -132,7 +130,7 @@ public class ZKMap<K, V> implements Map<K, V> {
     @Override
     public V get(final Object key) {
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<String> keyPaths = getKeyPaths(key);
@@ -185,7 +183,7 @@ public class ZKMap<K, V> implements Map<K, V> {
     }
 
     private V putNoLock(final K key, final V value) throws Exception {
-        RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+        UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
         while (retryLoop.shouldContinue()) {
             try {
                 // Search the existing keys
@@ -214,7 +212,7 @@ public class ZKMap<K, V> implements Map<K, V> {
     public V remove(final Object key) {
         m_lock.lock();
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<String> keyPaths = getKeyPaths(key);
@@ -248,7 +246,7 @@ public class ZKMap<K, V> implements Map<K, V> {
     public void clear() {
         m_lock.lock();
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     // Delete the map recursively
@@ -271,7 +269,7 @@ public class ZKMap<K, V> implements Map<K, V> {
         Set<K> keySet = new HashSet<K>();
 
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<String> keyPaths = getKeyPaths();
@@ -299,7 +297,7 @@ public class ZKMap<K, V> implements Map<K, V> {
         List<V> values = new LinkedList<V>();
 
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<String> keyPaths = getKeyPaths();
@@ -327,7 +325,7 @@ public class ZKMap<K, V> implements Map<K, V> {
         Set<java.util.Map.Entry<K, V>> entries = new HashSet<java.util.Map.Entry<K, V>>();
 
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<String> keyPaths = getKeyPaths();
@@ -357,17 +355,17 @@ public class ZKMap<K, V> implements Map<K, V> {
     }
 
     private K getKey(String keyPath) throws Exception {
-        return objFromBytes(m_client.getData().forPath(keyPath));
+        return SerializationUtils.objFromBytes(m_client.getData().forPath(keyPath));
     }
 
     private V getValue(String keyPath) throws Exception {
-        return objFromBytes(m_client.getData().forPath((ZKPaths.makePath(keyPath,
+        return SerializationUtils.objFromBytes(m_client.getData().forPath((ZKPaths.makePath(keyPath,
                                                                          VALUE_SUFFIX))));
     }
 
     private void setValue(String keyPath, V value) throws Exception {
         m_client.setData().forPath(ZKPaths.makePath(keyPath, VALUE_SUFFIX),
-                                   objToBytes(value));
+                                   SerializationUtils.objToBytes(value));
     }
 
     private void addKeyValue(K key, V value) throws Exception {
@@ -377,11 +375,11 @@ public class ZKMap<K, V> implements Map<K, V> {
 
         String keyPath = ZKPaths.makePath(hashPath, KEY_PREFIX);
         keyPath = m_client.create().withMode(CreateMode.PERSISTENT_SEQUENTIAL).forPath(keyPath,
-                                                                                       objToBytes(key));
+                                                                                       SerializationUtils.objToBytes(key));
 
         String valuePath = ZKPaths.makePath(keyPath, VALUE_SUFFIX);
         m_client.create().withMode(CreateMode.PERSISTENT).forPath(valuePath,
-                                                                  objToBytes(value));
+                                                                  SerializationUtils.objToBytes(value));
     }
 
     private List<String> getHashPaths() throws Exception {

@@ -4,16 +4,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 
+import org.apache.curator.RetryLoop;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.locks.InterProcessMutex;
 
 /**
- * TODO: What happens when a client disappears while holding lock?
- *
+ * @see org.apache.curator.framework.recipes.locks.InterProcessMutex
  * @author jwhite
  */
 public class ZKLock extends InterProcessMutex implements Lock {
-
     public static final String PATH_PREFIX = "/onms/locks/";
 
     private final CuratorFramework m_client;
@@ -26,9 +25,17 @@ public class ZKLock extends InterProcessMutex implements Lock {
     @Override
     public void lock() {
         try {
-            acquire();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
+            while (retryLoop.shouldContinue()) {
+                try {
+                    acquire();
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            ZKExceptionHandler.handle(e);
         }
     }
 
@@ -45,6 +52,7 @@ public class ZKLock extends InterProcessMutex implements Lock {
         try {
             return tryLock(10, TimeUnit.MILLISECONDS);
         } catch (InterruptedException ignore) {
+            // Ignore the interrupted exception
             Thread.interrupted();
             return false;
         }
@@ -54,20 +62,38 @@ public class ZKLock extends InterProcessMutex implements Lock {
     public boolean tryLock(long time, TimeUnit unit)
             throws InterruptedException {
         try {
-            return acquire(time, unit);
-        } catch (InterruptedException e) {
-            throw e;
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    return acquire(time, unit);
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (InterruptedException rethrow) {
+            throw rethrow;
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            ZKExceptionHandler.handle(e);
         }
+
+        // Should never get here
+        return false;
     }
 
     @Override
     public void unlock() {
         try {
-            release();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
+            while (retryLoop.shouldContinue()) {
+                try {
+                    release();
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            ZKExceptionHandler.handle(e);
         }
     }
 

@@ -23,16 +23,16 @@ import org.springframework.test.context.ContextConfiguration;
         "classpath:/META-INF/opennms/component-grid-test.xml" })
 @JUnitGrid()
 public class GridTest extends TestCase {
-    public final int N_MEMBERS;
-    public static final int N_MEMBERS_DEFAULT = 3;
+    public final int N_MEMBERS = 3;
     public static DataGridProvider gridProvider;
+    private final boolean m_reuseGridProvider;
 
     public GridTest() {
-        N_MEMBERS = N_MEMBERS_DEFAULT;
+        m_reuseGridProvider = true;
     }
 
-    public GridTest(final int numMembers) {
-        N_MEMBERS = numMembers;
+    public GridTest(boolean reuseGridProvider) {
+        m_reuseGridProvider = reuseGridProvider;
     }
 
     @BeforeClass
@@ -45,15 +45,27 @@ public class GridTest extends TestCase {
     public void setUp() throws Exception {
         super.setUp();
         MockLogAppender.setupLogging(true, "DEBUG");
+        
+        if (gridProvider == null) {
+            gridProvider = getGridProvider();
+        }
+
         if (!gridProvider.isRunning()) {
             gridProvider = getGridProvider();
         }
+
         await().until(getNumMembers(gridProvider), is(1));
     }
 
     @After
     public void tearDown() throws Exception {
         super.tearDown();
+        
+        if (!m_reuseGridProvider) {
+            gridProvider.shutdown();
+            gridProvider = null;
+        }
+
         MockLogAppender.assertNoErrorOrGreater();
     }
 

@@ -22,12 +22,9 @@ import org.apache.zookeeper.ZKUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.opennms.core.grid.zookeeper.ZKUtils.objToBytes;
-import static org.opennms.core.grid.zookeeper.ZKUtils.objFromBytes;
-
 /**
  * Based on org.apache.curator.framework.recipes.queue.SimpleDistributedQueue.
- *
+ * 
  * @author jwhite
  */
 public class ZKQueue<T> implements BlockingQueue<T> {
@@ -37,7 +34,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
 
     private final CuratorFramework m_client;
     private final String m_path;
- 
+
     public ZKQueue(CuratorFramework client, String name) {
         m_client = client;
         m_path = ZKPaths.makePath(PATH_PREFIX, name);
@@ -48,10 +45,10 @@ public class ZKQueue<T> implements BlockingQueue<T> {
         T node = null;
 
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
-                     node = internalElement(true, null);
+                    node = internalElement(true, null);
                     retryLoop.markComplete();
                 } catch (Exception e) {
                     retryLoop.takeException(e);
@@ -71,7 +68,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
     public T poll() {
         try {
             return remove();
-        } catch ( NoSuchElementException e ) {
+        } catch (NoSuchElementException e) {
             return null;
         }
     }
@@ -81,10 +78,10 @@ public class ZKQueue<T> implements BlockingQueue<T> {
         T node = null;
 
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
-                     node = internalElement(false, null);
+                    node = internalElement(false, null);
                     retryLoop.markComplete();
                 } catch (Exception e) {
                     retryLoop.takeException(e);
@@ -104,7 +101,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
     public T peek() {
         try {
             return element();
-        } catch ( NoSuchElementException e ) {
+        } catch (NoSuchElementException e) {
             return null;
         }
     }
@@ -113,13 +110,13 @@ public class ZKQueue<T> implements BlockingQueue<T> {
     public int size() {
         int size = 0;
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<String> nodes;
                     try {
                         nodes = m_client.getChildren().forPath(m_path);
-                    } catch ( KeeperException.NoNodeException ignore ) {
+                    } catch (KeeperException.NoNodeException ignore) {
                         // No queue, no nodes
                         return 0;
                     }
@@ -145,7 +142,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
     @Override
     public Iterator<T> iterator() {
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<T> els = internalAllElements(false);
@@ -165,7 +162,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
     @Override
     public Object[] toArray() {
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<T> els = internalAllElements(false);
@@ -185,7 +182,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
     @Override
     public <W> W[] toArray(W[] a) {
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<T> els = internalAllElements(false);
@@ -205,7 +202,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
     @Override
     public boolean containsAll(Collection<?> c) {
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<T> els = internalAllElements(false);
@@ -232,19 +229,19 @@ public class ZKQueue<T> implements BlockingQueue<T> {
     public boolean removeAll(Collection<?> c) {
         boolean didRemove = false;
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<String> nodePaths = getNodePaths();
                     for (String nodePath : nodePaths) {
                         try {
-                            T el = objFromBytes(m_client.getData().forPath(nodePath));
+                            T el = SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
                             if (c.contains(el)) {
                                 m_client.delete().forPath(nodePath);
                                 didRemove = true;
                             }
-                        } catch ( KeeperException.NoNodeException ignore ) {
-                            //Another client removed the node first, try next
+                        } catch (KeeperException.NoNodeException ignore) {
+                            // Another client removed the node first, try next
                         }
                     }
                     retryLoop.markComplete();
@@ -263,19 +260,19 @@ public class ZKQueue<T> implements BlockingQueue<T> {
     public boolean retainAll(Collection<?> c) {
         boolean didRemove = false;
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<String> nodePaths = getNodePaths();
                     for (String nodePath : nodePaths) {
                         try {
-                            T el = objFromBytes(m_client.getData().forPath(nodePath));
+                            T el = SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
                             if (!c.contains(el)) {
                                 m_client.delete().forPath(nodePath);
                                 didRemove = true;
                             }
-                        } catch ( KeeperException.NoNodeException ignore ) {
-                            //Another client removed the node first, try next
+                        } catch (KeeperException.NoNodeException ignore) {
+                            // Another client removed the node first, try next
                         }
                     }
                     retryLoop.markComplete();
@@ -293,7 +290,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
     @Override
     public void clear() {
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     // Delete the queue recursively
@@ -319,14 +316,15 @@ public class ZKQueue<T> implements BlockingQueue<T> {
         }
 
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     EnsurePath ensurePath = m_client.newNamespaceAwareEnsurePath(m_path);
                     ensurePath.ensure(m_client.getZookeeperClient());
 
                     String nodePath = ZKPaths.makePath(m_path, NODE_PREFIX);
-                    m_client.create().withMode(CreateMode.PERSISTENT_SEQUENTIAL).forPath(nodePath, objToBytes(el));
+                    m_client.create().withMode(CreateMode.PERSISTENT_SEQUENTIAL).forPath(nodePath,
+                                                                                         SerializationUtils.objToBytes(el));
 
                     retryLoop.markComplete();
                 } catch (Exception e) {
@@ -377,7 +375,8 @@ public class ZKQueue<T> implements BlockingQueue<T> {
     }
 
     @Override
-    public T poll(final long timeout, final TimeUnit unit) throws InterruptedException {
+    public T poll(final long timeout, final TimeUnit unit)
+            throws InterruptedException {
         try {
             RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
             while (retryLoop.shouldContinue()) {
@@ -405,19 +404,19 @@ public class ZKQueue<T> implements BlockingQueue<T> {
     @Override
     public boolean remove(Object o) {
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<String> nodePaths = getNodePaths();
                     for (String nodePath : nodePaths) {
                         try {
-                            T el = objFromBytes(m_client.getData().forPath(nodePath));
+                            T el = SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
                             if (o.equals(el)) {
                                 m_client.delete().forPath(nodePath);
                                 return true;
                             }
-                        } catch ( KeeperException.NoNodeException ignore ) {
-                            //Another client removed the node first, try next
+                        } catch (KeeperException.NoNodeException ignore) {
+                            // Another client removed the node first, try next
                         }
                     }
                     retryLoop.markComplete();
@@ -435,18 +434,18 @@ public class ZKQueue<T> implements BlockingQueue<T> {
     @Override
     public boolean contains(Object o) {
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<String> nodePaths = getNodePaths();
                     for (String nodePath : nodePaths) {
                         try {
-                            T el = objFromBytes(m_client.getData().forPath(nodePath));
+                            T el = SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
                             if (o.equals(el)) {
                                 return true;
                             }
-                        } catch ( KeeperException.NoNodeException ignore ) {
-                            //Another client removed the node first, try next
+                        } catch (KeeperException.NoNodeException ignore) {
+                            // Another client removed the node first, try next
                         }
                     }
                     retryLoop.markComplete();
@@ -474,7 +473,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
 
         int elementsAdded = 0;
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     List<T> els = internalAllElements(true, maxElements);
@@ -492,43 +491,36 @@ public class ZKQueue<T> implements BlockingQueue<T> {
         return elementsAdded;
     }
 
-    private T internalPoll(long timeout, TimeUnit unit) throws Exception
-    {
+    private T internalPoll(long timeout, TimeUnit unit) throws Exception {
         EnsurePath ensurePath = m_client.newNamespaceAwareEnsurePath(m_path);
         ensurePath.ensure(m_client.getZookeeperClient());
 
-        long            startMs = System.currentTimeMillis();
-        boolean         hasTimeout = (unit != null);
-        long            maxWaitMs = hasTimeout ? TimeUnit.MILLISECONDS.convert(timeout, unit) : Long.MAX_VALUE;
-        for(;;)
-        {
-            final CountDownLatch    latch = new CountDownLatch(1);
-            Watcher                 watcher = new Watcher()
-            {
+        long startMs = System.currentTimeMillis();
+        boolean hasTimeout = (unit != null);
+        long maxWaitMs = hasTimeout ? TimeUnit.MILLISECONDS.convert(timeout,
+                                                                    unit)
+                                   : Long.MAX_VALUE;
+        for (;;) {
+            final CountDownLatch latch = new CountDownLatch(1);
+            Watcher watcher = new Watcher() {
                 @Override
-                public void process(WatchedEvent event)
-                {
+                public void process(WatchedEvent event) {
                     latch.countDown();
                 }
             };
             T el = internalElement(true, watcher);
-            if ( el != null )
-            {
+            if (el != null) {
                 return el;
             }
 
-            if ( hasTimeout )
-            {
-                long        elapsedMs = System.currentTimeMillis() - startMs;
-                long        thisWaitMs = maxWaitMs - elapsedMs;
-                if ( thisWaitMs <= 0 )
-                {
+            if (hasTimeout) {
+                long elapsedMs = System.currentTimeMillis() - startMs;
+                long thisWaitMs = maxWaitMs - elapsedMs;
+                if (thisWaitMs <= 0) {
                     return null;
                 }
                 latch.await(thisWaitMs, TimeUnit.MILLISECONDS);
-            }
-            else
-            {
+            } else {
                 latch.await();
             }
         }
@@ -543,8 +535,9 @@ public class ZKQueue<T> implements BlockingQueue<T> {
 
         List<String> nodes;
         try {
-            nodes = (watcher != null) ? m_client.getChildren().usingWatcher(watcher).forPath(m_path) : m_client.getChildren().forPath(m_path);
-        } catch ( KeeperException.NoNodeException dummy ) {
+            nodes = (watcher != null) ? m_client.getChildren().usingWatcher(watcher).forPath(m_path)
+                                     : m_client.getChildren().forPath(m_path);
+        } catch (KeeperException.NoNodeException dummy) {
             return nodePaths;
         }
         Collections.sort(nodes);
@@ -560,17 +553,18 @@ public class ZKQueue<T> implements BlockingQueue<T> {
         return nodePaths;
     }
 
-    private T internalElement(boolean removeIt, Watcher watcher) throws Exception {
+    private T internalElement(boolean removeIt, Watcher watcher)
+            throws Exception {
         List<String> nodePaths = getNodePaths(watcher);
-        for ( String nodePath : nodePaths ) {
+        for (String nodePath : nodePaths) {
             try {
-                T el = objFromBytes(m_client.getData().forPath(nodePath));
+                T el = SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
                 if (removeIt) {
                     m_client.delete().forPath(nodePath);
                 }
                 return el;
-            } catch ( KeeperException.NoNodeException ignore ) {
-                //Another client removed the node first, try next
+            } catch (KeeperException.NoNodeException ignore) {
+                // Another client removed the node first, try next
             }
         }
 
@@ -581,12 +575,13 @@ public class ZKQueue<T> implements BlockingQueue<T> {
         return internalAllElements(removeThem, Integer.MAX_VALUE);
     }
 
-    private List<T> internalAllElements(boolean removeThem, int maxElements) throws Exception {
+    private List<T> internalAllElements(boolean removeThem, int maxElements)
+            throws Exception {
         List<T> els = new LinkedList<T>();
         List<String> nodePaths = getNodePaths();
         for (String nodePath : nodePaths) {
             try {
-                T el = objFromBytes(m_client.getData().forPath(nodePath));
+                T el = SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
                 els.add(el);
                 if (removeThem) {
                     m_client.delete().forPath(nodePath);
@@ -595,8 +590,8 @@ public class ZKQueue<T> implements BlockingQueue<T> {
                 if (els.size() == maxElements) {
                     break;
                 }
-            } catch ( KeeperException.NoNodeException ignore ) {
-                //Another client removed the node first, try next
+            } catch (KeeperException.NoNodeException ignore) {
+                // Another client removed the node first, try next
             }
         }
         return els;

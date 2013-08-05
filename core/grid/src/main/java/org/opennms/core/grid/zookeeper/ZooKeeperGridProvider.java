@@ -16,8 +16,11 @@ import org.opennms.core.grid.MembershipListener;
 /**
  * Implements the data grid provider interface using ZooKeeper.
  * 
- * Exception and error handling needs work.
- * Also, I still need to figure out a way to deal with interrupted exceptions. Ignore them like Hazelcast does?
+ * ZooKeeper exceptions are handled with a lengthy retry policy. If the problem
+ * persists, exceptions are wrapped in an unchecked ZKException and re-thrown.
+ * This is not ideal, but it works, except when it fails.
+ *
+ * InterupptedException are ignored unless the method explicitly throws them.
  * 
  * @author jwhite
  */
@@ -70,7 +73,7 @@ public class ZooKeeperGridProvider implements DataGridProvider {
     @Override
     public Condition getCondition(final Lock lock, final String name) {
         if (lock instanceof ZKLock) {
-            return ((ZKLock)lock).newCondition(name);
+            return ((ZKLock) lock).newCondition(name);
         } else {
             throw new RuntimeException("Invalid lock");
         }
@@ -107,24 +110,28 @@ public class ZooKeeperGridProvider implements DataGridProvider {
     /** @inheritDoc */
     @Override
     public Member getLocalMember() {
+        init();
         return m_memberManager.getLocalMember();
     }
 
     /** @inheritDoc */
     @Override
     public Set<Member> getGridMembers() {
+        init();
         return m_memberManager.getGridMembers();
     }
 
     /** @inheritDoc */
     @Override
     public String addMembershipListener(MembershipListener listener) {
+        init();
         return m_memberManager.addMembershipListener(listener);
     }
 
     /** @inheritDoc */
     @Override
     public void removeMembershipListener(String registrationId) {
+        init();
         m_memberManager.removeMembershipListener(registrationId);
     }
 

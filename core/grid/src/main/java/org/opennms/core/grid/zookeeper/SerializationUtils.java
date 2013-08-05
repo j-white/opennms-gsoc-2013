@@ -7,21 +7,8 @@ import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
-import java.util.concurrent.Callable;
 
-import org.apache.curator.CuratorZookeeperClient;
-import org.apache.curator.RetryLoop;
-
-public class ZKUtils {
-    public static <U> U callWithRetry(CuratorZookeeperClient client,
-            Callable<U> proc) {
-        try {
-            return RetryLoop.callWithRetry(client, proc);
-        } catch (Exception e) {
-            throw new ZKException(e);
-        }
-    }
-
+public class SerializationUtils {
     public static <U> byte[] objToBytes(U o) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutput out = null;

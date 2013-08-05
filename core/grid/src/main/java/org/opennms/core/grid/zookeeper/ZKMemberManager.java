@@ -7,9 +7,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.curator.RetryLoop;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorWatcher;
+import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.utils.EnsurePath;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
@@ -17,8 +17,11 @@ import org.apache.zookeeper.WatchedEvent;
 import org.opennms.core.grid.Member;
 import org.opennms.core.grid.MembershipEvent;
 import org.opennms.core.grid.MembershipListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ZKMemberManager implements CuratorWatcher {
+    private static final Logger LOG = LoggerFactory.getLogger(ZKMemberManager.class);
     public static final String MEMBER_PATH = "/onms/members";
     private static final String MEMBER_NODE_PREFIX = "m-";
 
@@ -30,6 +33,7 @@ public class ZKMemberManager implements CuratorWatcher {
     public ZKMemberManager(CuratorFramework client) {
         m_client = client;
         m_localMember = setupLocalMember();
+        syncMembers();
     }
 
     public Member getLocalMember() {
@@ -56,14 +60,17 @@ public class ZKMemberManager implements CuratorWatcher {
         String localMemberPath = null;
         ZKMember localMember = new ZKMember();
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(
+                                                                              m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     EnsurePath ensurePath = m_client.newNamespaceAwareEnsurePath(MEMBER_PATH);
                     ensurePath.ensure(m_client.getZookeeperClient());
 
-                    localMemberPath = ZKPaths.makePath(MEMBER_PATH, MEMBER_NODE_PREFIX);
-                    localMemberPath = m_client.create().withMode(CreateMode.EPHEMERAL_SEQUENTIAL).forPath(localMemberPath, ZKUtils.objToBytes(localMember));
+                    localMemberPath = ZKPaths.makePath(MEMBER_PATH,
+                                                       MEMBER_NODE_PREFIX);
+                    localMemberPath = m_client.create().withMode(CreateMode.EPHEMERAL_SEQUENTIAL).forPath(localMemberPath,
+                                                                                                          SerializationUtils.objToBytes(localMember));
                     retryLoop.markComplete();
                 } catch (Exception e) {
                     retryLoop.takeException(e);
@@ -78,9 +85,15 @@ public class ZKMemberManager implements CuratorWatcher {
     }
 
     private synchronized void syncMembers() {
+        if (m_client.getState() != CuratorFrameworkState.STARTED) {
+            LOG.info("Curator client is stopped. Stopping member sync.");
+            return;
+        }
+
         List<String> memberNodes = null;
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(
+                                                                              m_client);
             while (retryLoop.shouldContinue()) {
                 try {
                     memberNodes = m_client.getChildren().usingWatcher(this).forPath(MEMBER_PATH);
@@ -117,9 +130,10 @@ public class ZKMemberManager implements CuratorWatcher {
     private ZKMember getMemberAt(String path) {
         ZKMember member = null;
         try {
-            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(
+                                                                              m_client);
             while (retryLoop.shouldContinue()) {
-                member = ZKUtils.objFromBytes(m_client.getData().forPath(path));
+                member = SerializationUtils.objFromBytes(m_client.getData().forPath(path));
                 retryLoop.markComplete();
             }
         } catch (Exception e) {
@@ -135,23 +149,29 @@ public class ZKMemberManager implements CuratorWatcher {
         m_members.put(path, member);
 
         for (MembershipListener listener : m_listeners.values()) {
-            listener.memberAdded(new ZKMembershipEvent(MembershipEvent.MEMBER_ADDED, member));
+            listener.memberAdded(new ZKMembershipEvent(
+                                                       MembershipEvent.MEMBER_ADDED,
+                                                       member));
         }
     }
 
     private synchronized void handleMemberRemoved(String path) {
-        ZKMember member = getMemberAt(path);
-
-        m_members.remove(path);
+        ZKMember member = m_members.remove(path);
+        if (member == null) {
+            LOG.error("No member with path {} was found in the map.", path);
+            return;
+        }
 
         for (MembershipListener listener : m_listeners.values()) {
-            listener.memberRemoved(new ZKMembershipEvent(MembershipEvent.MEMBER_REMOVED, member));
+            listener.memberRemoved(new ZKMembershipEvent(
+                                                         MembershipEvent.MEMBER_REMOVED,
+                                                         member));
         }
     }
 
     @Override
     public void process(WatchedEvent event) throws Exception {
-        switch(event.getType()) {
+        switch (event.getType()) {
         case NodeCreated:
             handleMemberAdded(event.getPath());
             break;

@@ -6,7 +6,7 @@ import org.apache.curator.framework.CuratorFramework;
 
 /**
  * My lazy implementation of a set.
- *
+ * 
  * @author jwhite
  */
 public class ZKSet<T> extends ZKQueue<T> implements Set<T> {
