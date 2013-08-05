@@ -160,7 +160,7 @@ public class QueueTest extends JSR166TestCase {
             });
         try {
             t.start();
-            Thread.sleep(SMALL_DELAY_MS);
+            Thread.sleep(LONG_DELAY_MS);
             assertTrue(q.offer(zero, SHORT_DELAY_MS, TimeUnit.MILLISECONDS));
             t.join();
         } catch (Exception e){
