@@ -1,82 +1,140 @@
 package org.opennms.core.grid.zookeeper;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.curator.RetryLoop;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.queue.SimpleDistributedQueue;
+import org.apache.curator.utils.EnsurePath;
+import org.apache.curator.utils.ZKPaths;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZKUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import static org.opennms.core.grid.zookeeper.ZKUtils.objToBytes;
+import static org.opennms.core.grid.zookeeper.ZKUtils.objFromBytes;
+
+/**
+ * Based on org.apache.curator.framework.recipes.queue.SimpleDistributedQueue.
+ *
+ * @author jwhite
+ */
 public class ZKQueue<T> implements BlockingQueue<T> {
-
+    private static final Logger LOG = LoggerFactory.getLogger(ZKQueue.class);
     public static final String PATH_PREFIX = "/onms/queue/";
+    private static final String NODE_PREFIX = "qn-";
 
     private final CuratorFramework m_client;
-    private final SimpleDistributedQueue m_distributedQueue;
-
+    private final String m_path;
+ 
     public ZKQueue(CuratorFramework client, String name) {
         m_client = client;
-        m_distributedQueue = new SimpleDistributedQueue(client, PATH_PREFIX + name);
-    }
-
-    private T objFromBytes(byte[] bytes) {
-        return null;
-    }
-
-    private byte[] bytesFromObj(T obj) {
-        return null;
-    }
-
-    private <U> U callWithRetry(Callable<U> proc) {
-        return ZKUtils.callWithRetry(m_client.getZookeeperClient(), proc);
+        m_path = ZKPaths.makePath(PATH_PREFIX, name);
     }
 
     @Override
     public T remove() {
-        return callWithRetry(new Callable<T>() {
-              @Override
-              public T call() throws Exception {
-                  return objFromBytes(m_distributedQueue.remove());
-              }
-        });
+        T node = null;
+
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                     node = internalElement(true, null);
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
+
+        if (node == null) {
+            throw new NoSuchElementException();
+        }
+        return node;
     }
 
     @Override
     public T poll() {
-        return callWithRetry(new Callable<T>() {
-            @Override
-            public T call() throws Exception {
-                return objFromBytes(m_distributedQueue.poll());
-            }
-      });
+        try {
+            return remove();
+        } catch ( NoSuchElementException e ) {
+            return null;
+        }
     }
 
     @Override
     public T element() {
-        return callWithRetry(new Callable<T>() {
-            @Override
-            public T call() throws Exception {
-                return objFromBytes(m_distributedQueue.element());
+        T node = null;
+
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                     node = internalElement(false, null);
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
             }
-        });
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
+
+        if (node == null) {
+            throw new NoSuchElementException();
+        }
+        return node;
     }
 
     @Override
     public T peek() {
-        return callWithRetry(new Callable<T>() {
-            @Override
-            public T call() throws Exception {
-                return objFromBytes(m_distributedQueue.peek());
-            }
-        });
+        try {
+            return element();
+        } catch ( NoSuchElementException e ) {
+            return null;
+        }
     }
 
     @Override
     public int size() {
-        // TODO Auto-generated method stub
-        return 0;
+        int size = 0;
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<String> nodes;
+                    try {
+                        nodes = m_client.getChildren().forPath(m_path);
+                    } catch ( KeeperException.NoNodeException ignore ) {
+                        // No queue, no nodes
+                        return 0;
+                    }
+
+                    size = nodes.size();
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
+
+        return size;
     }
 
     @Override
@@ -86,124 +144,461 @@ public class ZKQueue<T> implements BlockingQueue<T> {
 
     @Override
     public Iterator<T> iterator() {
-        // TODO Auto-generated method stub
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<T> els = internalAllElements(false);
+                    return els.iterator();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
+
+        // Should never make it here
         return null;
     }
 
     @Override
     public Object[] toArray() {
-        // TODO Auto-generated method stub
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<T> els = internalAllElements(false);
+                    return els.toArray();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
+
+        // Should never make it here
         return null;
     }
 
     @Override
     public <W> W[] toArray(W[] a) {
-        // TODO Auto-generated method stub
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<T> els = internalAllElements(false);
+                    return els.toArray(a);
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
+
+        // Should never make it here
         return null;
     }
 
     @Override
     public boolean containsAll(Collection<?> c) {
-        // TODO Auto-generated method stub
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<T> els = internalAllElements(false);
+                    return els.containsAll(c);
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
         return false;
     }
 
     @Override
     public boolean addAll(Collection<? extends T> c) {
-        // TODO Auto-generated method stub
-        return false;
+        for (T el : c) {
+            add(el);
+        }
+        return c.size() > 0;
     }
 
     @Override
     public boolean removeAll(Collection<?> c) {
-        // TODO Auto-generated method stub
-        return false;
+        boolean didRemove = false;
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<String> nodePaths = getNodePaths();
+                    for (String nodePath : nodePaths) {
+                        try {
+                            T el = objFromBytes(m_client.getData().forPath(nodePath));
+                            if (c.contains(el)) {
+                                m_client.delete().forPath(nodePath);
+                                didRemove = true;
+                            }
+                        } catch ( KeeperException.NoNodeException ignore ) {
+                            //Another client removed the node first, try next
+                        }
+                    }
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
+
+        return didRemove;
     }
 
     @Override
     public boolean retainAll(Collection<?> c) {
-        // TODO Auto-generated method stub
-        return false;
+        boolean didRemove = false;
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<String> nodePaths = getNodePaths();
+                    for (String nodePath : nodePaths) {
+                        try {
+                            T el = objFromBytes(m_client.getData().forPath(nodePath));
+                            if (!c.contains(el)) {
+                                m_client.delete().forPath(nodePath);
+                                didRemove = true;
+                            }
+                        } catch ( KeeperException.NoNodeException ignore ) {
+                            //Another client removed the node first, try next
+                        }
+                    }
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
+
+        return didRemove;
     }
 
     @Override
     public void clear() {
-        // TODO Auto-generated method stub
-        
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    // Delete the queue recursively
+                    ZKUtil.deleteRecursive(m_client.getZookeeperClient().getZooKeeper(),
+                                           m_path);
+                    retryLoop.markComplete();
+                } catch (KeeperException.NoNodeException ignore) {
+                    // Already cleared
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
     }
 
     @Override
-    public boolean add(T e) {
-        // TODO Auto-generated method stub
-        return false;
+    public boolean add(T el) {
+        if (el == null) {
+            throw new NullPointerException("The element cannot be null.");
+        }
+
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    EnsurePath ensurePath = m_client.newNamespaceAwareEnsurePath(m_path);
+                    ensurePath.ensure(m_client.getZookeeperClient());
+
+                    String nodePath = ZKPaths.makePath(m_path, NODE_PREFIX);
+                    m_client.create().withMode(CreateMode.PERSISTENT_SEQUENTIAL).forPath(nodePath, objToBytes(el));
+
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
+
+        return true;
     }
 
     @Override
     public boolean offer(final T e) {
-        return callWithRetry(new Callable<Boolean>() {
-            @Override
-            public Boolean call() throws Exception {
-                return m_distributedQueue.offer(bytesFromObj(e));
-            }
-        });
+        return add(e);
     }
 
     @Override
     public void put(final T e) throws InterruptedException {
-        offer(e);
+        add(e);
     }
 
     @Override
     public boolean offer(final T e, final long timeout, final TimeUnit unit) {
-        return offer(e);
+        return add(e);
     }
 
     @Override
     public T take() throws InterruptedException {
-        return callWithRetry(new Callable<T>() {
-            @Override
-            public T call() throws Exception {
-                return objFromBytes(m_distributedQueue.take());
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    return internalPoll(0, null);
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
             }
-        });
+        } catch (InterruptedException e) {
+            throw e;
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
+
+        // Should never make it here
+        return null;
     }
 
     @Override
     public T poll(final long timeout, final TimeUnit unit) throws InterruptedException {
-        return callWithRetry(new Callable<T>() {
-            @Override
-            public T call() throws Exception {
-                return objFromBytes(m_distributedQueue.poll(timeout, unit));
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    return internalPoll(timeout, unit);
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
             }
-        });
+        } catch (InterruptedException e) {
+            throw e;
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
+
+        // Should never make it here
+        return null;
     }
 
     @Override
     public int remainingCapacity() {
-        return -1;
+        return Integer.MAX_VALUE;
     }
 
     @Override
     public boolean remove(Object o) {
-        // TODO Auto-generated method stub
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<String> nodePaths = getNodePaths();
+                    for (String nodePath : nodePaths) {
+                        try {
+                            T el = objFromBytes(m_client.getData().forPath(nodePath));
+                            if (o.equals(el)) {
+                                m_client.delete().forPath(nodePath);
+                                return true;
+                            }
+                        } catch ( KeeperException.NoNodeException ignore ) {
+                            //Another client removed the node first, try next
+                        }
+                    }
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
+
         return false;
     }
 
     @Override
     public boolean contains(Object o) {
-        // TODO Auto-generated method stub
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<String> nodePaths = getNodePaths();
+                    for (String nodePath : nodePaths) {
+                        try {
+                            T el = objFromBytes(m_client.getData().forPath(nodePath));
+                            if (o.equals(el)) {
+                                return true;
+                            }
+                        } catch ( KeeperException.NoNodeException ignore ) {
+                            //Another client removed the node first, try next
+                        }
+                    }
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
+
         return false;
     }
 
     @Override
     public int drainTo(Collection<? super T> c) {
-        // TODO Auto-generated method stub
-        return 0;
+        return drainTo(c, Integer.MAX_VALUE);
     }
 
     @Override
     public int drainTo(Collection<? super T> c, int maxElements) {
-        // TODO Auto-generated method stub
-        return 0;
+        if (this == c) {
+            throw new IllegalArgumentException("Cannot drain to self.");
+        }
+
+        int elementsAdded = 0;
+        try {
+            RetryLoop retryLoop = m_client.getZookeeperClient().newRetryLoop();
+            while (retryLoop.shouldContinue()) {
+                try {
+                    List<T> els = internalAllElements(true, maxElements);
+                    c.addAll(els);
+                    elementsAdded = els.size();
+                    retryLoop.markComplete();
+                } catch (Exception e) {
+                    retryLoop.takeException(e);
+                }
+            }
+        } catch (Exception e) {
+            ZKExceptionHandler.handle(e);
+        }
+
+        return elementsAdded;
+    }
+
+    private T internalPoll(long timeout, TimeUnit unit) throws Exception
+    {
+        EnsurePath ensurePath = m_client.newNamespaceAwareEnsurePath(m_path);
+        ensurePath.ensure(m_client.getZookeeperClient());
+
+        long            startMs = System.currentTimeMillis();
+        boolean         hasTimeout = (unit != null);
+        long            maxWaitMs = hasTimeout ? TimeUnit.MILLISECONDS.convert(timeout, unit) : Long.MAX_VALUE;
+        for(;;)
+        {
+            final CountDownLatch    latch = new CountDownLatch(1);
+            Watcher                 watcher = new Watcher()
+            {
+                @Override
+                public void process(WatchedEvent event)
+                {
+                    latch.countDown();
+                }
+            };
+            T el = internalElement(true, watcher);
+            if ( el != null )
+            {
+                return el;
+            }
+
+            if ( hasTimeout )
+            {
+                long        elapsedMs = System.currentTimeMillis() - startMs;
+                long        thisWaitMs = maxWaitMs - elapsedMs;
+                if ( thisWaitMs <= 0 )
+                {
+                    return null;
+                }
+                latch.await(thisWaitMs, TimeUnit.MILLISECONDS);
+            }
+            else
+            {
+                latch.await();
+            }
+        }
+    }
+
+    private List<String> getNodePaths() throws Exception {
+        return getNodePaths(null);
+    }
+
+    private List<String> getNodePaths(Watcher watcher) throws Exception {
+        List<String> nodePaths = new LinkedList<String>();
+
+        List<String> nodes;
+        try {
+            nodes = (watcher != null) ? m_client.getChildren().usingWatcher(watcher).forPath(m_path) : m_client.getChildren().forPath(m_path);
+        } catch ( KeeperException.NoNodeException dummy ) {
+            return nodePaths;
+        }
+        Collections.sort(nodes);
+
+        for (String node : nodes) {
+            if (!node.startsWith(NODE_PREFIX)) {
+                LOG.warn("Foreign node in queue path: " + node);
+                continue;
+            }
+            nodePaths.add(ZKPaths.makePath(m_path, node));
+        }
+
+        return nodePaths;
+    }
+
+    private T internalElement(boolean removeIt, Watcher watcher) throws Exception {
+        List<String> nodePaths = getNodePaths(watcher);
+        for ( String nodePath : nodePaths ) {
+            try {
+                T el = objFromBytes(m_client.getData().forPath(nodePath));
+                if (removeIt) {
+                    m_client.delete().forPath(nodePath);
+                }
+                return el;
+            } catch ( KeeperException.NoNodeException ignore ) {
+                //Another client removed the node first, try next
+            }
+        }
+
+        return null;
+    }
+
+    private List<T> internalAllElements(boolean removeThem) throws Exception {
+        return internalAllElements(removeThem, Integer.MAX_VALUE);
+    }
+
+    private List<T> internalAllElements(boolean removeThem, int maxElements) throws Exception {
+        List<T> els = new LinkedList<T>();
+        List<String> nodePaths = getNodePaths();
+        for (String nodePath : nodePaths) {
+            try {
+                T el = objFromBytes(m_client.getData().forPath(nodePath));
+                els.add(el);
+                if (removeThem) {
+                    m_client.delete().forPath(nodePath);
+                }
+
+                if (els.size() == maxElements) {
+                    break;
+                }
+            } catch ( KeeperException.NoNodeException ignore ) {
+                //Another client removed the node first, try next
+            }
+        }
+        return els;
     }
 }

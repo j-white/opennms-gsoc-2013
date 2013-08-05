@@ -62,7 +62,7 @@ public class ZKMap<K, V> implements Map<K, V> {
                 }
             }
         } catch (Exception e) {
-            throw new ZKException(e);
+            ZKExceptionHandler.handle(e);
         }
 
         return numEls;
@@ -95,7 +95,7 @@ public class ZKMap<K, V> implements Map<K, V> {
                 }
             }
         } catch (Exception e) {
-            throw new ZKException(e);
+            ZKExceptionHandler.handle(e);
         }
 
         return false;
@@ -123,7 +123,7 @@ public class ZKMap<K, V> implements Map<K, V> {
                 }
             }
         } catch (Exception e) {
-            throw new ZKException(e);
+            ZKExceptionHandler.handle(e);
         }
 
         return false;
@@ -151,7 +151,7 @@ public class ZKMap<K, V> implements Map<K, V> {
                 }
             }
         } catch (Exception e) {
-            throw new ZKException(e);
+            ZKExceptionHandler.handle(e);
         }
 
         return null;
@@ -163,7 +163,8 @@ public class ZKMap<K, V> implements Map<K, V> {
         try {
             return putNoLock(key, value);
         } catch (Exception e) {
-            throw new ZKException(e);
+            ZKExceptionHandler.handle(e);
+            return null;
         } finally {
             m_lock.unlock();
         }
@@ -177,7 +178,7 @@ public class ZKMap<K, V> implements Map<K, V> {
                 putNoLock(entry.getKey(), entry.getValue());
             }
         } catch (Exception e) {
-            throw new ZKException(e);
+            ZKExceptionHandler.handle(e);
         } finally {
             m_lock.unlock();
         }
@@ -236,7 +237,7 @@ public class ZKMap<K, V> implements Map<K, V> {
                 }
             }
         } catch (Exception e) {
-            throw new ZKException(e);
+            ZKExceptionHandler.handle(e);
         } finally {
             m_lock.unlock();
         }
@@ -259,7 +260,7 @@ public class ZKMap<K, V> implements Map<K, V> {
                 }
             }
         } catch (Exception e) {
-            throw new ZKException(e);
+            ZKExceptionHandler.handle(e);
         } finally {
             m_lock.unlock();
         }
@@ -287,7 +288,7 @@ public class ZKMap<K, V> implements Map<K, V> {
                 }
             }
         } catch (Exception e) {
-            throw new ZKException(e);
+            ZKExceptionHandler.handle(e);
         }
 
         return keySet;
@@ -315,7 +316,7 @@ public class ZKMap<K, V> implements Map<K, V> {
                 }
             }
         } catch (Exception e) {
-            throw new ZKException(e);
+            ZKExceptionHandler.handle(e);
         }
 
         return values;
@@ -345,7 +346,7 @@ public class ZKMap<K, V> implements Map<K, V> {
                 }
             }
         } catch (Exception e) {
-            throw new ZKException(e);
+            ZKExceptionHandler.handle(e);
         }
 
         return entries;

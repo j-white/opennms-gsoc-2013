@@ -7,12 +7,20 @@ import java.util.concurrent.locks.Lock;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.locks.InterProcessMutex;
 
+/**
+ * TODO: What happens when a client disappears while holding lock?
+ *
+ * @author jwhite
+ */
 public class ZKLock extends InterProcessMutex implements Lock {
 
     public static final String PATH_PREFIX = "/onms/locks/";
 
+    private final CuratorFramework m_client;
+
     public ZKLock(CuratorFramework client, String name) {
         super(client, PATH_PREFIX + name);
+        m_client = client;
     }
 
     @Override
@@ -65,6 +73,10 @@ public class ZKLock extends InterProcessMutex implements Lock {
 
     @Override
     public Condition newCondition() {
-        throw new UnsupportedOperationException();
+        return newCondition("default");
+    }
+
+    public Condition newCondition(final String name) {
+        return new ZKCondition(m_client, this, name);
     }
 }
