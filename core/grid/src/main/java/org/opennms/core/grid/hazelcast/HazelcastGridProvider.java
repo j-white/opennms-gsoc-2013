@@ -98,12 +98,6 @@ public class HazelcastGridProvider implements DataGridProvider {
 
     /** {@inheritDoc} */
     @Override
-    public String getName() {
-        return getHazelcastInstance().getName();
-    }
-
-    /** {@inheritDoc} */
-    @Override
     public Member getLocalMember() {
         return new HazelcastMember(
                                    getHazelcastInstance().getCluster().getLocalMember());

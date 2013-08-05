@@ -92,13 +92,6 @@ public interface DataGridProvider {
     public <T> Set<T> getSet(String name);
 
     /**
-     * Returns the name of this grid provider instance.
-     * 
-     * @return name of this grid provider instance
-     */
-    public String getName();
-
-    /**
      * Retrieves the member for this grid provider instance.
      * 
      * @return member for this grid provider instance

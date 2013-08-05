@@ -163,9 +163,9 @@ public class DistributedSchedulerTest {
         double minPercentageOfTasksRanOnAnyMember = Double.MAX_VALUE;
         int totalNumTasksRan = 0;
         for (DataGridProvider dataGridProvider : dataGridProviders) {
-            String gridProviderName = dataGridProvider.getName();
+            String gridProviderId = dataGridProvider.getLocalMember().getUuid();
 
-            int numTasksRanOnMember = MySingletonMap.getInstance().getValueAt(gridProviderName);
+            int numTasksRanOnMember = MySingletonMap.getInstance().getValueAt(gridProviderId);
             double percentageOfTasksRanOnMember = 100 * numTasksRanOnMember
                     / (double) TOTAL_NUM_TASKS_TO_RUN;
             totalNumTasksRan += numTasksRanOnMember;
@@ -174,7 +174,7 @@ public class DistributedSchedulerTest {
                                              numTasksRanOnMember,
                                              TOTAL_NUM_TASKS_TO_RUN,
                                              percentageOfTasksRanOnMember,
-                                             gridProviderName));
+                                             gridProviderId));
 
             if (percentageOfTasksRanOnMember < minPercentageOfTasksRanOnAnyMember) {
                 minPercentageOfTasksRanOnAnyMember = percentageOfTasksRanOnMember;
@@ -297,7 +297,7 @@ public class DistributedSchedulerTest {
             assertNotNull(m_dataGridProvider);
 
             MySingletonMap.getInstance().incValueAt(m_key);
-            MySingletonMap.getInstance().incValueAt(m_dataGridProvider.getName());
+            MySingletonMap.getInstance().incValueAt(m_dataGridProvider.getLocalMember().getUuid());
 
             if (m_msToSleepWhenRan > 0) {
                 try {

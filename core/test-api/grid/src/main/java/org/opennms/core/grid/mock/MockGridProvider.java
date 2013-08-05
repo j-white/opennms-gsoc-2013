@@ -101,11 +101,6 @@ public class MockGridProvider implements DataGridProvider, Member {
     }
 
     @Override
-    public String getName() {
-        return "MockDataGridProvider";
-    }
-
-    @Override
     public Member getLocalMember() {
         initIfRequired();
         return this;
