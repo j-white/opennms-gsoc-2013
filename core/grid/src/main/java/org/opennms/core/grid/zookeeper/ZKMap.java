@@ -354,12 +354,14 @@ public class ZKMap<K, V> implements Map<K, V> {
         return ZKPaths.makePath(m_path, "" + key.hashCode());
     }
 
+    @SuppressWarnings("unchecked")
     private K getKey(String keyPath) throws Exception {
-        return SerializationUtils.objFromBytes(m_client.getData().forPath(keyPath));
+        return (K)SerializationUtils.objFromBytes(m_client.getData().forPath(keyPath));
     }
 
+    @SuppressWarnings("unchecked")
     private V getValue(String keyPath) throws Exception {
-        return SerializationUtils.objFromBytes(m_client.getData().forPath((ZKPaths.makePath(keyPath,
+        return (V)SerializationUtils.objFromBytes(m_client.getData().forPath((ZKPaths.makePath(keyPath,
                                                                          VALUE_SUFFIX))));
     }
 

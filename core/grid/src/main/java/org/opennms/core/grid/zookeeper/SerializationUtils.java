@@ -9,7 +9,7 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 
 public class SerializationUtils {
-    public static <U> byte[] objToBytes(U o) {
+    public static byte[] objToBytes(Object o) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutput out = null;
         try {
@@ -28,14 +28,13 @@ public class SerializationUtils {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public static <U> U objFromBytes(byte[] b) {
+    public static Object objFromBytes(byte[] b) {
         try {
             ByteArrayInputStream bis = new ByteArrayInputStream(b);
             ObjectInput in = null;
             try {
                 in = new ObjectInputStream(bis);
-                return (U) in.readObject();
+                return in.readObject();
             } catch (IOException e) {
                 throw new ZKSerializationException(e);
             } catch (ClassNotFoundException e) {

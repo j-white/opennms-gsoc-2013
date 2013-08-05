@@ -133,7 +133,7 @@ public class ZKMemberManager implements CuratorWatcher {
             UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(
                                                                               m_client);
             while (retryLoop.shouldContinue()) {
-                member = SerializationUtils.objFromBytes(m_client.getData().forPath(path));
+                member = (ZKMember) SerializationUtils.objFromBytes(m_client.getData().forPath(path));
                 retryLoop.markComplete();
             }
         } catch (Exception e) {

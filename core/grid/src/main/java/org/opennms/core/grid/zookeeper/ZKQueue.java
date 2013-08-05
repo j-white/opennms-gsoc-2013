@@ -225,6 +225,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
         return c.size() > 0;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public boolean removeAll(Collection<?> c) {
         boolean didRemove = false;
@@ -235,7 +236,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
                     List<String> nodePaths = getNodePaths();
                     for (String nodePath : nodePaths) {
                         try {
-                            T el = SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
+                            T el = (T) SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
                             if (c.contains(el)) {
                                 m_client.delete().forPath(nodePath);
                                 didRemove = true;
@@ -256,6 +257,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
         return didRemove;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public boolean retainAll(Collection<?> c) {
         boolean didRemove = false;
@@ -266,7 +268,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
                     List<String> nodePaths = getNodePaths();
                     for (String nodePath : nodePaths) {
                         try {
-                            T el = SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
+                            T el = (T) SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
                             if (!c.contains(el)) {
                                 m_client.delete().forPath(nodePath);
                                 didRemove = true;
@@ -401,6 +403,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
         return Integer.MAX_VALUE;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public boolean remove(Object o) {
         try {
@@ -410,7 +413,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
                     List<String> nodePaths = getNodePaths();
                     for (String nodePath : nodePaths) {
                         try {
-                            T el = SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
+                            T el = (T) SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
                             if (o.equals(el)) {
                                 m_client.delete().forPath(nodePath);
                                 return true;
@@ -431,6 +434,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
         return false;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public boolean contains(Object o) {
         try {
@@ -440,7 +444,7 @@ public class ZKQueue<T> implements BlockingQueue<T> {
                     List<String> nodePaths = getNodePaths();
                     for (String nodePath : nodePaths) {
                         try {
-                            T el = SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
+                            T el = (T) SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
                             if (o.equals(el)) {
                                 return true;
                             }
@@ -553,12 +557,13 @@ public class ZKQueue<T> implements BlockingQueue<T> {
         return nodePaths;
     }
 
+    @SuppressWarnings("unchecked")
     private T internalElement(boolean removeIt, Watcher watcher)
             throws Exception {
         List<String> nodePaths = getNodePaths(watcher);
         for (String nodePath : nodePaths) {
             try {
-                T el = SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
+                T el = (T) SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
                 if (removeIt) {
                     m_client.delete().forPath(nodePath);
                 }
@@ -575,13 +580,14 @@ public class ZKQueue<T> implements BlockingQueue<T> {
         return internalAllElements(removeThem, Integer.MAX_VALUE);
     }
 
+    @SuppressWarnings("unchecked")
     private List<T> internalAllElements(boolean removeThem, int maxElements)
             throws Exception {
         List<T> els = new LinkedList<T>();
         List<String> nodePaths = getNodePaths();
         for (String nodePath : nodePaths) {
             try {
-                T el = SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
+                T el = (T) SerializationUtils.objFromBytes(m_client.getData().forPath(nodePath));
                 els.add(el);
                 if (removeThem) {
                     m_client.delete().forPath(nodePath);
