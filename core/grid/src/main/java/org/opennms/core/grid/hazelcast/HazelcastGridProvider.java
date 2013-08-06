@@ -16,6 +16,7 @@ import org.opennms.core.grid.MembershipListener;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.ILock;
+import com.hazelcast.core.IQueue;
 
 /**
  * Hazelcast Data Grid Provider
@@ -87,7 +88,8 @@ public class HazelcastGridProvider implements DataGridProvider {
     /** {@inheritDoc} */
     @Override
     public <T> BlockingQueue<T> getQueue(String name) {
-        return getHazelcastInstance().getQueue(name);
+        IQueue<T> queue = getHazelcastInstance().getQueue(name);
+        return new HazelcastQueue<T>(queue);
     }
 
     /** {@inheritDoc} */

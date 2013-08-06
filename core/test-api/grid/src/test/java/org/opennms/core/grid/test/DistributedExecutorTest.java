@@ -11,6 +11,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
 import org.junit.Before;
@@ -49,9 +50,9 @@ public class DistributedExecutorTest extends GridTest {
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws InterruptedException {
         for (DistributedExecutor executor : m_executors) {
-            executor.shutdown();
+            executor.shutdown(10, TimeUnit.SECONDS);
         }
     }
 
@@ -122,8 +123,9 @@ public class DistributedExecutorTest extends GridTest {
             return m_tasksExecuted;
         }
 
-        public void shutdown() {
-            m_runner.shutdownNow();
+        public void shutdown(long timeout, TimeUnit unit) throws InterruptedException {
+            m_runner.shutdown();
+            assertTrue(m_runner.awaitTermination(timeout, unit));
         }
 
         @Override
