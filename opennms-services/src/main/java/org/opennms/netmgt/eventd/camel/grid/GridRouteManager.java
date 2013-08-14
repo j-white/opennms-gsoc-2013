@@ -93,6 +93,8 @@ public class GridRouteManager implements InitializingBean, DisposableBean,
             addRouteForMember(member);
         }
 
+        //FIXME: Possible race condition here. The membership listener 
+        // should be added before enumerating the members manually.
         LOG.info("Adding membership listener.");
         m_registrationId = m_dataGridProvider.addMembershipListener(this);
     }
