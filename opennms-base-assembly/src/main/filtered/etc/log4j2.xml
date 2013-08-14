@@ -52,6 +52,7 @@
     <KeyValuePair key="discovery"            value="DEBUG" />
     <KeyValuePair key="eventd"               value="DEBUG" />
     <KeyValuePair key="event-translator"     value="DEBUG" />
+    <KeyValuePair key="grid"                 value="INFO" />
     <KeyValuePair key="instrumentation"      value="DEBUG" />
     <KeyValuePair key="jetty-server"         value="DEBUG" />
     <KeyValuePair key="linkd"                value="DEBUG" />

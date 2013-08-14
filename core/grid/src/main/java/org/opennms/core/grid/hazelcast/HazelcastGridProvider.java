@@ -25,7 +25,7 @@ import com.hazelcast.core.IQueue;
  */
 public class HazelcastGridProvider implements DataGridProvider {
 
-    private static final String LOG4J_PREFIX = "hazelcast";
+    private static final String LOG4J_PREFIX = "grid";
 
     private HazelcastInstance m_hazelcastInstance = null;
 

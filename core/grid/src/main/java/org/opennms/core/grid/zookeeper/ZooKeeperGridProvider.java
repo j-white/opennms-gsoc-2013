@@ -14,6 +14,7 @@ import org.opennms.core.grid.GridConfigDao;
 import org.opennms.core.grid.GridConfigFactory;
 import org.opennms.core.grid.Member;
 import org.opennms.core.grid.MembershipListener;
+import org.opennms.core.logging.Logging;
 
 /**
  * Implements the data grid provider interface using ZooKeeper.
@@ -27,6 +28,7 @@ import org.opennms.core.grid.MembershipListener;
  * @author jwhite
  */
 public class ZooKeeperGridProvider implements DataGridProvider {
+    private static final String LOG4J_PREFIX = "grid";
     private CuratorFramework m_client = null;
     private ZKMemberManager m_memberManager;
 
@@ -36,7 +38,10 @@ public class ZooKeeperGridProvider implements DataGridProvider {
             return;
         }
 
+        @SuppressWarnings("rawtypes")
+        Map mdc = Logging.getCopyOfContextMap();
         try {
+            Logging.putPrefix(LOG4J_PREFIX);
             m_client = CuratorFrameworkFactory.newClient(getConfig().getServerConnectionString(),
                                                          getConfig().getRetryPolicy());
             m_client.start();
@@ -48,6 +53,8 @@ public class ZooKeeperGridProvider implements DataGridProvider {
                 m_client = null;
             }
             throw e;
+        } finally {
+            Logging.setContextMap(mdc);
         }
     }
 
