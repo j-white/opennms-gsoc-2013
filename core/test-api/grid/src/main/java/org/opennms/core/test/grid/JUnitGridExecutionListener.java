@@ -30,12 +30,10 @@ package org.opennms.core.test.grid;
 
 import java.lang.reflect.Method;
 
-import org.apache.activemq.broker.BrokerService;
 import org.apache.curator.test.TestingServer;
 import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.grid.DataGridProviderFactory;
 import org.opennms.core.grid.GridConfigFactory;
-import org.opennms.core.grid.activemq.ActiveMQGridProvider;
 import org.opennms.core.grid.hazelcast.HazelcastGridProvider;
 import org.opennms.core.grid.zookeeper.ZooKeeperGridProvider;
 import org.opennms.core.test.grid.annotations.JUnitGrid;
@@ -46,7 +44,6 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
     private Class<? extends DataGridProvider> m_gridClass;
     private boolean m_reuseGrid = false;
     private TestingServer m_zkTestServer;
-    private BrokerService m_amqBroker;
 
     public void beforeTestClass(TestContext testContext) throws Exception {
         final JUnitGrid jug = findAnnotation(testContext);
@@ -101,20 +98,6 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
                 GridConfigFactory.getInstance().setServerConnectionString(m_zkTestServer.getConnectString());
             }
         }
-
-        if (ActiveMQGridProvider.class.isAssignableFrom(m_gridClass)) {
-            if (m_amqBroker == null) {
-                m_amqBroker = new BrokerService();
-                m_amqBroker.setBrokerName("localhost");
-                m_amqBroker.setPersistent(false);
-                // This removes on error message logged by AMQ on startup if there's < 50GB available
-                m_amqBroker.getSystemUsage().getTempUsage().setLimit(1024 * 1024 * 100);
-                m_amqBroker.start();
-                m_amqBroker.waitUntilStarted();
-
-                GridConfigFactory.getInstance().setBrokerURL("vm://localhost?create=false");
-            }
-        }
     }
 
     private void shutdownAndResetProvider() throws Exception {
@@ -133,14 +116,6 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
             if (m_zkTestServer != null) {
                 m_zkTestServer.close();
                 m_zkTestServer = null;
-            }
-        }
-
-        if (ActiveMQGridProvider.class.isAssignableFrom(m_gridClass)) {
-            if (m_amqBroker != null) {
-                m_amqBroker.stop();
-                m_amqBroker.waitUntilStopped();
-                m_amqBroker = null;
             }
         }
     }
