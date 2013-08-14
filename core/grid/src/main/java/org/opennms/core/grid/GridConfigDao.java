@@ -7,6 +7,4 @@ public interface GridConfigDao {
     public String getServerConnectionString();
 
     public RetryPolicy getRetryPolicy();
-
-    public String getBrokerURL();
 }

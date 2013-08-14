@@ -6,11 +6,9 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 public class GridConfigFactory implements GridConfigDao {
     private static GridConfigFactory m_singleton = null;
     private String m_serverConnectionString;
-    private String m_brokerURL;
 
     private GridConfigFactory() {
-        m_serverConnectionString = "";
-        m_brokerURL = "";
+        m_serverConnectionString = System.getProperty("zookeeper.server-connection-string");
     }
 
     public static synchronized void setInstance(GridConfigFactory cf) {
@@ -28,10 +26,6 @@ public class GridConfigFactory implements GridConfigDao {
         m_serverConnectionString = serverConnectionString;
     }
 
-    public void setBrokerURL(String brokerURL) {
-        m_brokerURL = brokerURL;
-    }
-
     @Override
     public String getServerConnectionString() {
         return m_serverConnectionString;
@@ -40,10 +34,5 @@ public class GridConfigFactory implements GridConfigDao {
     @Override
     public RetryPolicy getRetryPolicy() {
         return new ExponentialBackoffRetry(1000, 10);
-    }
-
-    @Override
-    public String getBrokerURL() {
-        return m_brokerURL;
     }
 }
