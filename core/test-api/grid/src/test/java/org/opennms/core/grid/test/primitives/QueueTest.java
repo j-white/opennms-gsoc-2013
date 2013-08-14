@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 /*
@@ -39,6 +40,22 @@ public class QueueTest extends JSR166TestCase {
             q.offer(null);
             shouldThrow();
         } catch (NullPointerException success) { }   
+    }
+
+    /**
+     * add and take
+     * @throws InterruptedException 
+     */
+    @Test(timeout=QUEUE_TEST_TIMEOUT)
+    public void testAddAndTake() throws InterruptedException {
+        BlockingQueue q = getNewQueue();
+        for (int i = 0; i < 5; i++) {
+            q.add(Integer.valueOf(i));
+        }
+        assertEquals(5, q.size());
+        for (int i = 0; i < 5; i++) {
+            assertEquals(Integer.valueOf(i), q.take());
+        }
     }
 
     /**

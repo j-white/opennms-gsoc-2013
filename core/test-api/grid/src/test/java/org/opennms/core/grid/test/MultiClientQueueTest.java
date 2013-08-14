@@ -14,6 +14,7 @@ import org.opennms.core.grid.test.primitives.JSR166TestCase;
 import org.opennms.test.mock.MockUtil;
 
 public class MultiClientQueueTest extends JSR166TestCase {
+    final int N_MEMBERS = 1;
 
     /**
      * Ensure that the elements added to the distributed queue are

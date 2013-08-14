@@ -3,6 +3,7 @@ package org.opennms.core.grid.zookeeper;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.atomic.DistributedAtomicLong;
 import org.opennms.core.grid.AtomicLong;
+import org.opennms.core.grid.GridConfigFactory;
 
 public class ZKAtomicLong implements AtomicLong {
     public static final String PATH_PREFIX = "/onms/atomic/";
@@ -12,7 +13,7 @@ public class ZKAtomicLong implements AtomicLong {
 
     public ZKAtomicLong(CuratorFramework client, String name) {
         m_client = client;
-        m_atomicLong = new DistributedAtomicLong(client, PATH_PREFIX + name, ZKConfigFactory.getInstance().getRetryPolicy());
+        m_atomicLong = new DistributedAtomicLong(client, PATH_PREFIX + name, GridConfigFactory.getInstance().getRetryPolicy());
     }
 
     @Override

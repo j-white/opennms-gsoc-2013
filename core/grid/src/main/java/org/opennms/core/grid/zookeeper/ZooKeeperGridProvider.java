@@ -10,6 +10,8 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.opennms.core.grid.AtomicLong;
 import org.opennms.core.grid.DataGridProvider;
+import org.opennms.core.grid.GridConfigDao;
+import org.opennms.core.grid.GridConfigFactory;
 import org.opennms.core.grid.Member;
 import org.opennms.core.grid.MembershipListener;
 
@@ -135,8 +137,8 @@ public class ZooKeeperGridProvider implements DataGridProvider {
         m_memberManager.removeMembershipListener(registrationId);
     }
 
-    private static ZKConfigDao getConfig() {
-        return ZKConfigFactory.getInstance();
+    private static GridConfigDao getConfig() {
+        return GridConfigFactory.getInstance();
     }
 
     @Override

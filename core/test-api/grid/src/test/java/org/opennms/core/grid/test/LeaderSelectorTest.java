@@ -49,8 +49,7 @@ import static org.hamcrest.Matchers.*;
  */
 public class LeaderSelectorTest extends GridTest {
     /**
-     * Used to prevent any clients from gaining or relinquishing leadership so
-     * that we can very only a single leader is elected.
+     * Used to prevent any clients (threads) from gaining or relinquishing leadership.
      */
     private Object leaderLock = new Object();
 
@@ -60,17 +59,16 @@ public class LeaderSelectorTest extends GridTest {
     private static final Logger LOG = LoggerFactory.getLogger(LeaderSelectorTest.class);
 
     /**
-     * A cluster client that tries to become leader and maintains the leader
-     * state for a random amount of time.
-     * 
+     * A client that tries to become leader and maintains the leader
+     * state for a random T milliseconds with T in unif(0, 500).
+     *
      * @author jwhite
-     * 
      */
     private class ClusterClient implements LeaderSelectorListener {
         private String m_id;
         private int m_leaderCount = 0;
         private boolean m_isLeader = false;
-        private LeaderSelector m_leaderSelector;
+        private final LeaderSelector m_leaderSelector;
 
         public ClusterClient(String id) {
             m_id = id;
