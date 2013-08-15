@@ -44,6 +44,8 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
     private Class<? extends DataGridProvider> m_gridClass;
     private boolean m_reuseGrid = false;
     private TestingServer m_zkTestServer;
+    // FIXME: This should be stored in a properties file that is also used by Spring
+    private static Class<? extends DataGridProvider> DEFAULT_GRID_PROVIDER = ZooKeeperGridProvider.class;
 
     public void beforeTestClass(TestContext testContext) throws Exception {
         final JUnitGrid jug = findAnnotation(testContext);
@@ -54,6 +56,9 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
 
         m_reuseGrid = jug.reuseGrid();
         m_gridClass = getGridClazz();
+
+        // The grid provider might be used right after being auto-wired
+        startupProvider();
     }
 
     public void beforeTestMethod(TestContext testContext) throws Exception {
@@ -83,10 +88,6 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
     }
 
     private void startupProvider() throws Exception {
-        if (m_gridClass == null) {
-            return;
-        }
-
         if (HazelcastGridProvider.class.isAssignableFrom(m_gridClass)) {
             System.setProperty("hazelcast.logging.type", "slf4j");
             System.setProperty("java.net.preferIPv4Stack", "true");
@@ -107,10 +108,6 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
         // Reset the default instance - it will no longer work after being
         // shutdown
         DataGridProviderFactory.setInstance(null);
-        
-        if (m_gridClass == null) {
-            return;
-        }
 
         if (ZooKeeperGridProvider.class.isAssignableFrom(m_gridClass)) {
             if (m_zkTestServer != null) {
@@ -124,7 +121,7 @@ public class JUnitGridExecutionListener extends AbstractTestExecutionListener {
     private static Class<? extends DataGridProvider> getGridClazz() throws ClassNotFoundException {
         String className = System.getProperty("gridClazz");
         if (className == null) {
-            return null;
+            return DEFAULT_GRID_PROVIDER;
         }
         return (Class<? extends DataGridProvider>) Class.forName(className);
     }

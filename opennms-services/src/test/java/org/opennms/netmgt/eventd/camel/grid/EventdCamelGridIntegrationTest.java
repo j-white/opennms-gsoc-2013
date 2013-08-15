@@ -63,7 +63,7 @@ import org.springframework.test.context.ContextConfiguration;
         "classpath*:/META-INF/opennms/component-dao.xml",
         "classpath:META-INF/opennms/applicationContext-camelEventd.xml",
         "classpath:META-INF/opennms/applicationContext-camelEventdTest.xml" })
-@JUnitGrid(reuseGrid = true)
+@JUnitGrid()
 public class EventdCamelGridIntegrationTest {
     @Autowired
     protected CamelContext camelContext;

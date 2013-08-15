@@ -21,7 +21,7 @@
 			<value>setType</value>
 		</property>
 		<property name="arguments">
-			<value>${grid.provider.type}</value>
+			<value>${grid.provider.type:org.opennms.core.grid.zookeeper.ZooKeeperGridProvider}</value>
 		</property>
 	</bean>
 
