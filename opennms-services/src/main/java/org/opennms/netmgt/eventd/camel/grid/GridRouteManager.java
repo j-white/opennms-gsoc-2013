@@ -119,12 +119,14 @@ public class GridRouteManager implements InitializingBean, DisposableBean,
 
     @Override
     public void memberAdded(MembershipEvent membershipEvent) {
+        //TODO: Set log prefix - this will be invoked from the grid provider's thread
         LOG.info("A member was added to the cluster.");
         addRouteForMember(membershipEvent.getMember());
     }
 
     @Override
     public void memberRemoved(MembershipEvent membershipEvent) {
+        //TODO: Set log prefix - this will be invoked from the grid provider's thread
         LOG.info("A member was removed from the cluster");
 
         Member member = membershipEvent.getMember();
