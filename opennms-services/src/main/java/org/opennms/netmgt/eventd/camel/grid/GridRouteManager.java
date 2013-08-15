@@ -28,6 +28,7 @@
 
 package org.opennms.netmgt.eventd.camel.grid;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -36,6 +37,8 @@ import org.opennms.core.grid.DataGridProvider;
 import org.opennms.core.grid.Member;
 import org.opennms.core.grid.MembershipEvent;
 import org.opennms.core.grid.MembershipListener;
+import org.opennms.core.logging.Logging;
+import org.opennms.netmgt.eventd.Eventd;
 import org.opennms.netmgt.eventd.camel.grid.GridRouteBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +81,11 @@ public class GridRouteManager implements InitializingBean, DisposableBean,
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(m_dataGridProvider);
 
+        // Setup the membership listener before adding the existing
+        // members in order to avoid a race condition
+        LOG.info("Adding membership listener.");
+        m_registrationId = m_dataGridProvider.addMembershipListener(this);
+
         Set<Member> gridMembers = m_dataGridProvider.getGridMembers();
         LOG.info("There are currently {} members in the grid.",
                  gridMembers.size());
@@ -92,11 +100,6 @@ public class GridRouteManager implements InitializingBean, DisposableBean,
 
             addRouteForMember(member);
         }
-
-        //FIXME: Possible race condition here. The membership listener 
-        // should be added before enumerating the members manually.
-        LOG.info("Adding membership listener.");
-        m_registrationId = m_dataGridProvider.addMembershipListener(this);
     }
 
     @Override
@@ -105,7 +108,38 @@ public class GridRouteManager implements InitializingBean, DisposableBean,
         m_dataGridProvider.removeMembershipListener(m_registrationId);
     }
 
-    public void addRouteForMember(Member member) {
+    @Override
+    public void memberAdded(MembershipEvent membershipEvent) {
+        // This will be invoked from the grid provider's thread
+        @SuppressWarnings("rawtypes")
+        Map mdc = Logging.getCopyOfContextMap();
+        try {
+            Logging.putPrefix(Eventd.LOG4J_CATEGORY);
+            
+            LOG.info("A member was added to the cluster.");
+            addRouteForMember(membershipEvent.getMember());
+        } finally {
+            Logging.setContextMap(mdc);
+        }
+    }
+
+
+    @Override
+    public void memberRemoved(MembershipEvent membershipEvent) {
+        // This will be invoked from the grid provider's thread
+        @SuppressWarnings("rawtypes")
+        Map mdc = Logging.getCopyOfContextMap();
+        try {
+            Logging.putPrefix(Eventd.LOG4J_CATEGORY);
+            
+            LOG.info("A member was removed from the cluster");
+            removeRouteForMember(membershipEvent.getMember());
+        } finally {
+            Logging.setContextMap(mdc);
+        }
+    }
+
+    public synchronized void addRouteForMember(Member member) {
         LOG.info("Adding route for {}", member);
 
         GridRouteBuilder routeBuilder = new GridRouteBuilder(member);
@@ -113,26 +147,16 @@ public class GridRouteManager implements InitializingBean, DisposableBean,
             m_camelContext.addRoutes(routeBuilder);
             m_camelContext.startRoute(routeBuilder.getRouteId());
         } catch (Exception e) {
-            LOG.error(e.getMessage());
+            LOG.error("Failed to add the route for {}: {}", member,
+                      e.getMessage());
         }
     }
 
-    @Override
-    public void memberAdded(MembershipEvent membershipEvent) {
-        //TODO: Set log prefix - this will be invoked from the grid provider's thread
-        LOG.info("A member was added to the cluster.");
-        addRouteForMember(membershipEvent.getMember());
-    }
+    public synchronized void removeRouteForMember(Member member) {
+        LOG.info("Stopping route for {}.", member);
 
-    @Override
-    public void memberRemoved(MembershipEvent membershipEvent) {
-        //TODO: Set log prefix - this will be invoked from the grid provider's thread
-        LOG.info("A member was removed from the cluster");
-
-        Member member = membershipEvent.getMember();
         GridRouteBuilder routeBuilder = new GridRouteBuilder(member);
         try {
-            LOG.info("Stopping route for {}.", member);
             m_camelContext.stopRoute(routeBuilder.getRouteId(), 5,
                                      TimeUnit.SECONDS);
             m_camelContext.removeRoute(routeBuilder.getRouteId());
