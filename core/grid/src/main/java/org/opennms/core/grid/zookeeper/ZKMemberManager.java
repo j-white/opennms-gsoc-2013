@@ -58,7 +58,14 @@ public class ZKMemberManager implements CuratorWatcher {
 
     private ZKMember setupLocalMember() {
         String localMemberPath = null;
-        ZKMember localMember = new ZKMember();
+
+        ZKMember localMember;
+        try {
+            localMember = new ZKMember();
+        } catch (Exception e) {
+            throw new ZKException(e);
+        }
+
         try {
             UninterruptibleRetryLoop retryLoop = new UninterruptibleRetryLoop(
                                                                               m_client);
