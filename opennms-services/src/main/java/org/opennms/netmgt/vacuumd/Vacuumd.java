@@ -159,7 +159,9 @@ public class Vacuumd extends AbstractServiceDaemon implements EventListener {
     /** {@inheritDoc} */
     @Override
     protected void onStop() {
-        m_scheduler.stop();
+        if (m_scheduler != null) {
+            m_scheduler.stop();
+        }
     }
 
     /** {@inheritDoc} */
