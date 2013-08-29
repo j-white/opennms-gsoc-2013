@@ -878,7 +878,7 @@
     <ecjVersion>4.2.2</ecjVersion>
     <gwtVersion>2.5.1</gwtVersion>
     <gwtPluginVersion>2.5.1</gwtPluginVersion>
-    <hazelcastVersion>3.0</hazelcastVersion>
+    <hazelcastVersion>3.0.1</hazelcastVersion>
     <httpcoreVersion>4.2.4</httpcoreVersion>
     <httpclientVersion>4.2.5</httpclientVersion>
     <jasperreportsVersion>3.7.6</jasperreportsVersion>
