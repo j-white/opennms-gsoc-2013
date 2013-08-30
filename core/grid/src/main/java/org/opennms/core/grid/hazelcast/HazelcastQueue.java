@@ -221,4 +221,8 @@ public class HazelcastQueue<T> implements IQueue<T> {
         return m_queue.getLocalQueueStats();
     }
 
+    @Override
+    public String getServiceName() {
+        return m_queue.getServiceName();
+    }
 }
