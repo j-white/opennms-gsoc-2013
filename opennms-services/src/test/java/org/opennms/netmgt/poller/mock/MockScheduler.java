@@ -160,11 +160,6 @@ public class MockScheduler implements Scheduler {
 		return 0;
 	}
 
-    @Override
-    public long getNumTasksExecuted() {
-        return m_numTasksExecuted;
-    }
-
     public void schedule(long interval, ReadyRunnable runnable,
             boolean isReschedule) {
         schedule(interval, runnable);

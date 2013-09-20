@@ -698,28 +698,23 @@ public abstract class Poller extends AbstractServiceDaemon {
         getNetwork().visit(visitor);
     }
 
-    /**
-     * Returns the number of polls that have been executed so far.
-     *
-     * @return the number of polls that have been executed
-     */
-    public long getNumPolls() {
-        if (m_scheduler != null) {
-            return m_scheduler.getNumTasksExecuted();
-        } else {
-            return 0L;
-        }
-    }
-
     public static String getLoggingCategory() {
         return LOG4J_CATEGORY;
 	}
 
     public long getNumPollsGlobal() {
-        return m_scheduler.getGlobalTasksExecuted();
+        if (m_scheduler != null) {
+            return m_scheduler.getGlobalTasksExecuted();
+        } else {
+            return 0L;
+        }
     }
 
     public long getNumPollsLocal() {
-        return m_scheduler.getLocalTasksExecuted();
+        if (m_scheduler != null) {
+            return m_scheduler.getLocalTasksExecuted();
+        } else {
+            return 0L;
+        }
     }
 }

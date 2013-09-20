@@ -38,6 +38,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 
 import org.opennms.core.concurrent.LogPreservingThreadFactory;
+import org.opennms.core.queue.FifoQueueImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,11 +67,6 @@ public class LegacyScheduler extends AbstractScheduler {
     private int m_scheduled;
 
     /**
-     * The total number of executed elements.
-     */
-    private long m_executed = 0;
-
-    /**
      * The current revision.
      */
     private volatile long m_revision = 0;
@@ -81,11 +77,6 @@ public class LegacyScheduler extends AbstractScheduler {
     private static final Logger LOG = LoggerFactory.getLogger(LegacyScheduler.class);
 
     private int m_status;
-
-    /**
-     * The worker thread that executes this instance.
-     */
-    private Thread m_worker;
 
     /**
      * Used to keep track of the number of tasks that have been executed.
